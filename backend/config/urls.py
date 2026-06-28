@@ -12,5 +12,5 @@ urlpatterns = [
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # API Versioning endpoints
-    # path('api/v1/', include('apps.urls', namespace='v1')), # Uncomment when business app modules are loaded
+    path('api/v1/auth/', include('apps.authentication.urls', namespace='auth')),
 ]

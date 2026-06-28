@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useToastStore } from '@/store/useToastStore'
 import { useAppStore } from '@/store/useAppStore'
+import apiClient from '@/services/apiClient'
 
 export const OtpPage: React.FC = () => {
   const navigate = useNavigate()
@@ -63,11 +64,26 @@ export const OtpPage: React.FC = () => {
   }
 
   const handleResend = async () => {
-    setTimer(30)
-    addToast({
-      type: 'info',
-      message: 'A new 6-digit code has been sent to your email.',
-    })
+    try {
+      setLoading(true)
+      await apiClient.post('/auth/send-otp/', {
+        email,
+        purpose: action
+      })
+      setTimer(30)
+      addToast({
+        type: 'info',
+        message: 'A new 6-digit code has been sent to your email.',
+      })
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Resend Failed',
+        message: err.message || 'Failed to resend code.',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,23 +99,24 @@ export const OtpPage: React.FC = () => {
 
     setLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Call verify-otp endpoint
+      await apiClient.post('/auth/verify-otp/', {
+        email,
+        code,
+        purpose: action
+      })
 
-      if (code === '123456') {
-        addToast({
-          type: 'success',
-          title: 'Code Verified',
-          message: 'Verification successful.',
-        })
+      addToast({
+        type: 'success',
+        title: 'Code Verified',
+        message: 'Verification successful.',
+      })
 
-        if (action === 'reset') {
-          navigate('/reset-password', { state: { email } })
-        } else {
-          // Complete signup redirect
-          navigate('/login')
-        }
+      if (action === 'reset') {
+        navigate('/reset-password', { state: { email } })
       } else {
-        throw new Error('Invalid code. Use 123456 for testing.')
+        // Complete signup redirect
+        navigate('/login')
       }
     } catch (err: any) {
       addToast({

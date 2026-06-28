@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { GoogleLoginButton } from '../components/GoogleLoginButton'
 import { useToastStore } from '@/store/useToastStore'
 import { useAppStore } from '@/store/useAppStore'
+import apiClient from '@/services/apiClient'
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
@@ -25,34 +26,41 @@ export const LoginPage: React.FC = () => {
     },
   })
 
+
   const onSubmit = async (data: any) => {
     setLoading(true)
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      if (data.email === 'admin@admin.com' && data.password === 'Password@123') {
-        localStorage.setItem('auth_token', 'mock_admin_token')
-        setUser({ id: '1', name: 'Admin User', email: data.email })
-        addToast({
-          type: 'success',
-          title: 'Welcome back!',
-          message: 'You have logged in successfully.',
-        })
-        navigate('/')
-      } else {
-        throw new Error('Invalid email or password. Use admin@admin.com / Password@123')
-      }
+      // Request real token from Django
+      const response = await apiClient.post('/auth/login/', {
+        email: data.email,
+        password: data.password
+      })
+      
+      const { access, refresh } = response.data
+      localStorage.setItem('auth_token', access)
+      localStorage.setItem('refresh_token', refresh)
+      
+      // Retrieve user profile information
+      const profileResponse = await apiClient.get('/auth/profile/')
+      setUser(profileResponse.data)
+      
+      addToast({
+        type: 'success',
+        title: 'Welcome back!',
+        message: 'You have logged in successfully.',
+      })
+      navigate('/')
     } catch (err: any) {
       addToast({
         type: 'error',
         title: 'Authentication Failed',
-        message: err.message || 'Something went wrong.',
+        message: err.message || 'Invalid email or password.',
       })
     } finally {
       setLoading(false)
     }
   }
+
 
   const handleGoogleLogin = async () => {
     setLoading(true)

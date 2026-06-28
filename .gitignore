@@ -14,6 +14,17 @@ dist-ssr
 .env.local
 .env.example
 
+venv
+.env
+.env.*
+!.env.example
+*.json.key
+firebase-key.json
+secrets/
+db.sqlite3
+__pycache__/
+*.pyc
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

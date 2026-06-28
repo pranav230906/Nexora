@@ -36,6 +36,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_spectacular',
     'channels',
+
+    # Internal Apps
+    'apps.authentication',
 ]
 
 MIDDLEWARE = [
@@ -116,7 +119,6 @@ REST_FRAMEWORK = {
         'anon': '60/minute',
         'user': '1000/day'
     },
-    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }
 
@@ -187,3 +189,6 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# Custom Authentication User Model
+AUTH_USER_MODEL = 'authentication.CustomUser'

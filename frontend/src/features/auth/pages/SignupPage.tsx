@@ -7,10 +7,12 @@ import { PasswordStrength } from '../components/PasswordStrength'
 import { useToastStore } from '@/store/useToastStore'
 import { useAppStore } from '@/store/useAppStore'
 
+import apiClient from '@/services/apiClient'
+
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate()
   const addToast = useToastStore((state) => state.addToast)
-  const { isLoading, setLoading } = useAppStore()
+  const { isLoading, setLoading, setUser } = useAppStore()
 
   const {
     register,
@@ -31,7 +33,14 @@ export const SignupPage: React.FC = () => {
   const onSubmit = async (data: any) => {
     setLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Call register API on Django
+      await apiClient.post('/auth/register/', {
+        username: data.name,
+        email: data.email,
+        password: data.password,
+        password_confirm: data.confirmPassword,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+      })
 
       addToast({
         type: 'success',
@@ -40,11 +49,12 @@ export const SignupPage: React.FC = () => {
       })
 
       // Navigate to OTP page passing email in state
-      navigate('/otp-verification', { state: { email: data.email } })
-    } catch (err) {
+      navigate('/otp-verification', { state: { email: data.email, action: 'signup' } })
+    } catch (err: any) {
       addToast({
         type: 'error',
-        message: 'Account creation failed.',
+        title: 'Signup Failed',
+        message: err.message || 'Account creation failed. Please try again.',
       })
     } finally {
       setLoading(false)

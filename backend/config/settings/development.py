@@ -11,3 +11,11 @@ CORS_ALLOWED_ORIGINS = [
 
 # Disable password validators length constraints in development for speed
 AUTH_PASSWORD_VALIDATORS = []
+
+# Use local memory cache in development to avoid local Redis server dependency
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'life-saver-dev-cache',
+    }
+}

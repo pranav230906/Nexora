@@ -1,0 +1,168 @@
+import React from 'react'
+import { useForm } from 'react-hook-form'
+import { Link, useNavigate } from 'react-router-dom'
+import { InputField } from '@/components/form/InputField'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { Button } from '@/components/ui/Button'
+import { GoogleLoginButton } from '../components/GoogleLoginButton'
+import { useToastStore } from '@/store/useToastStore'
+import { useAppStore } from '@/store/useAppStore'
+
+export const LoginPage: React.FC = () => {
+  const navigate = useNavigate()
+  const addToast = useToastStore((state) => state.addToast)
+  const { setUser, setLoading, isLoading } = useAppStore()
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: false,
+    },
+  })
+
+  const onSubmit = async (data: any) => {
+    setLoading(true)
+    try {
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      if (data.email === 'admin@admin.com' && data.password === 'Password@123') {
+        localStorage.setItem('auth_token', 'mock_admin_token')
+        setUser({ id: '1', name: 'Admin User', email: data.email })
+        addToast({
+          type: 'success',
+          title: 'Welcome back!',
+          message: 'You have logged in successfully.',
+        })
+        navigate('/')
+      } else {
+        throw new Error('Invalid email or password. Use admin@admin.com / Password@123')
+      }
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Authentication Failed',
+        message: err.message || 'Something went wrong.',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setLoading(true)
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      localStorage.setItem('auth_token', 'mock_google_token')
+      setUser({ id: '2', name: 'Google User', email: 'user@gmail.com' })
+      addToast({
+        type: 'success',
+        title: 'Signed in with Google',
+        message: 'Logged in successfully.',
+      })
+      navigate('/')
+    } catch (err) {
+      addToast({
+        type: 'error',
+        message: 'Google Sign-In failed.',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="font-display font-bold text-3xl tracking-tight text-foreground">
+          Sign In
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Welcome to Last Minute Life Saver. Ready to complete tasks?
+        </p>
+      </div>
+
+      {/* Social login */}
+      <GoogleLoginButton onClick={handleGoogleLogin} isLoading={isLoading} />
+
+      {/* Divider */}
+      <div className="relative flex items-center py-2">
+        <div className="flex-grow border-t border-border" />
+        <span className="flex-shrink mx-4 text-xs text-muted-foreground uppercase font-bold tracking-wider">
+          Or continue with
+        </span>
+        <div className="flex-grow border-t border-border" />
+      </div>
+
+      {/* Form login */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <InputField
+          label="Email Address"
+          type="email"
+          placeholder="e.g. name@company.com"
+          error={errors.email?.message}
+          disabled={isLoading}
+          {...register('email', {
+            required: 'Email is required',
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: 'Invalid email address',
+            },
+          })}
+        />
+
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Password
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <input
+            type="password"
+            placeholder="••••••••"
+            disabled={isLoading}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            {...register('password', {
+              required: 'Password is required',
+            })}
+          />
+          {errors.password && (
+            <span className="text-xs text-destructive font-medium">
+              {errors.password.message}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Checkbox label="Remember Me" {...register('rememberMe')} />
+        </div>
+
+        <Button type="submit" className="w-full" isLoading={isLoading}>
+          Sign In
+        </Button>
+      </form>
+
+      {/* Footer */}
+      <div className="text-center text-sm text-muted-foreground mt-4">
+        Don't have an account?{' '}
+        <Link to="/signup" className="text-primary font-semibold hover:underline">
+          Sign up
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+export default LoginPage

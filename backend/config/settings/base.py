@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'apps.ai_chatbot',
     'apps.notifications',
     'apps.gamification',
+    'apps.analytics',
 ]
 
 MIDDLEWARE = [

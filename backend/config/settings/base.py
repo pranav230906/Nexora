@@ -133,7 +133,7 @@ REST_FRAMEWORK = {
 
 # Swagger UI API Documentation Config
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Last Minute Life Saver API',
+    'TITLE': 'Nexora API',
     'DESCRIPTION': 'Production-ready AI companion backend services API documentation.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,

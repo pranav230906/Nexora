@@ -92,7 +92,7 @@ export const LoginPage: React.FC = () => {
           Sign In
         </h1>
         <p className="text-sm text-muted-foreground">
-          Welcome to Last Minute Life Saver. Ready to complete tasks?
+          Welcome to Nexora. Ready to complete tasks?
         </p>
       </div>
 

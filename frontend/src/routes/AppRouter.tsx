@@ -20,6 +20,8 @@ import AnalyticsPage from '@/features/analytics/pages/AnalyticsPage'
 import AiChatPage from '@/features/ai-chat/pages/AiChatPage'
 import NotificationCenterPage from '@/features/notifications/pages/NotificationCenterPage'
 
+import LandingPage from '@/features/landing/pages/LandingPage'
+
 import { useOffline } from '@/context/OfflineContext'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -30,7 +32,7 @@ const SettingsView = () => {
   const { isOnline, syncQueueCount, addToSyncQueue, triggerPwaInstall } = useOffline()
 
   const handleAddMockOfflineTask = () => {
-    addToSyncQueue('CREATE_TASK', { title: 'Mock Offline Task', id: Date.now() })
+    addToSyncQueue({ action: 'CREATE', model_name: 'Task', object_id: String(Date.now()), data: { title: 'Mock Offline Task' } })
   }
 
   return (
@@ -85,7 +87,7 @@ const SettingsView = () => {
           </CardHeader>
           <CardContent className="space-y-4 text-left">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Install "Last Minute Life Saver" on your home screen or desktop to run it in standard standalone mode with native notifications support.
+              Install "Nexora" on your home screen or desktop to run it in standard standalone mode with native notifications support.
             </p>
             <Button
               size="sm"
@@ -103,9 +105,18 @@ const SettingsView = () => {
   )
 }
 
+const RootRoute = () => {
+  const token = localStorage.getItem('auth_token')
+  return token ? <Navigate to="/dashboard" replace /> : <LandingPage />
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
+    element: <RootRoute />,
+  },
+  {
+    path: '/dashboard',
     element: (
       <ProtectedRoute>
         <DashboardLayout />

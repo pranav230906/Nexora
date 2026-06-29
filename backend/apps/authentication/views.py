@@ -48,7 +48,7 @@ class RegisterView(generics.CreateAPIView):
         # Send actual email OTP
         try:
             send_mail(
-                subject="Your Life Saver Verification Code",
+                subject="Your Nexora Verification Code",
                 message=f"Hello,\n\nYour 6-digit verification code is: {code}\n\nThis code will expire shortly.",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
@@ -211,7 +211,7 @@ class SendOTPView(views.APIView):
         # Send actual email OTP
         try:
             send_mail(
-                subject="Your Life Saver Verification Code",
+                subject="Your Nexora Verification Code",
                 message=f"Hello,\n\nYour 6-digit verification code is: {code}\n\nThis code will expire shortly.",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],

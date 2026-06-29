@@ -33,9 +33,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, className }) => {
         )}
         <Link to="/" className="flex items-center gap-2 font-display font-semibold text-lg">
           <span className="h-6 w-6 rounded bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
-            L
+            N
           </span>
-          Last Minute Life Saver
+          Nexora
         </Link>
       </div>
 

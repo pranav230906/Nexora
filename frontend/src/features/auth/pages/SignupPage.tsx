@@ -69,7 +69,7 @@ export const SignupPage: React.FC = () => {
           Create Account
         </h1>
         <p className="text-sm text-muted-foreground">
-          Join Last Minute Life Saver and escape productivity panic.
+          Join Nexora and escape productivity panic.
         </p>
       </div>
 

@@ -110,7 +110,7 @@ export const DashboardLayout: React.FC = () => {
                 sidebarCollapsed && 'lg:hidden',
               )}
             >
-              Life Saver
+              Nexora
             </span>
           </div>
 
@@ -166,7 +166,7 @@ export const DashboardLayout: React.FC = () => {
             >
               <div className="flex flex-col">
                 <div className="flex items-center justify-between pb-4 border-b border-border">
-                  <span className="font-display font-bold text-lg tracking-tight">Life Saver</span>
+                  <span className="font-display font-bold text-lg tracking-tight">Nexora</span>
                   <button
                     onClick={() => setMobileSidebarOpen(false)}
                     className="p-1 rounded-full hover:bg-secondary text-muted-foreground"

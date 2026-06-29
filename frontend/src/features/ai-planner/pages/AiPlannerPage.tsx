@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Brain,
   CalendarDays,
@@ -14,80 +14,64 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { useToastStore } from '@/store/useToastStore'
+import { useAiPlannerStore } from '@/store/useAiPlannerStore'
+import { useTaskStore } from '@/features/tasks/store/useTaskStore'
+import { useGoalHabitStore } from '@/store/useGoalHabitStore'
 
-// Mock Schedule Data
-const initialDailySchedule = [
-  { time: '09:00 AM - 10:30 AM', task: 'Optimize database indexes', duration: '90m', category: 'Deep Work', priority: 'urgent' },
-  { time: '11:00 AM - 12:00 PM', task: 'Review API responses', duration: '60m', category: 'Engineering', priority: 'medium' },
-  { time: '01:00 PM - 02:30 PM', task: 'Complete pitch deck draft', duration: '90m', category: 'Business', priority: 'high' },
-  { time: '03:00 PM - 04:00 PM', task: 'Email correspondence', duration: '60m', category: 'Admin', priority: 'low' },
-]
-
-const regeneratedDailySchedule = [
-  { time: '09:00 AM - 10:30 AM', task: 'Complete pitch deck draft', duration: '90m', category: 'Business', priority: 'high' },
-  { time: '11:00 AM - 12:00 PM', task: 'Optimize database indexes', duration: '90m', category: 'Deep Work', priority: 'urgent' },
-  { time: '01:00 PM - 02:00 PM', task: 'Review API responses', duration: '60m', category: 'Engineering', priority: 'medium' },
-  { time: '03:00 PM - 04:00 PM', task: 'Email correspondence', duration: '60m', category: 'Admin', priority: 'low' },
-]
-
-const initialWeeklySchedule = [
-  { day: 'Monday', focus: 'Database Indexes & API Architecture', duration: '4h Deep Work' },
-  { day: 'Tuesday', focus: 'Business Pitch deck & Financial Outline', duration: '3.5h Deep Work' },
-  { day: 'Wednesday', focus: 'Frontend Layouts & Component Design', duration: '5h Deep Work' },
-  { day: 'Thursday', focus: 'Marketing Strategies & Team Syncs', duration: '3h Admin' },
-  { day: 'Friday', focus: 'Diagnostic checks & Deployments', duration: '4h Deep Work' },
-]
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export const AiPlannerPage: React.FC = () => {
   const addToast = useToastStore((state) => state.addToast)
+
+  const {
+    dailyPlan,
+    chatHistory,
+    isPlanning,
+    isCoaching,
+    generateDailyPlan,
+    sendMessageToCoach
+  } = useAiPlannerStore()
+
+  const { tasks, fetchTasks } = useTaskStore()
+  const { habits, fetchHabits } = useGoalHabitStore()
 
   // Interactive View Tabs
   const [plannerTab, setPlannerTab] = useState<'daily' | 'weekly'>('daily')
 
   // Chat window state
-  const [messages, setMessages] = useState<Array<{ sender: 'ai' | 'user'; text: string }>>([
-    {
-      sender: 'ai',
-      text: "I've structured your day to place deep-work tasks during peak morning energy, followed by communications in the afternoon. How does it look?",
-    },
-  ])
   const [promptInput, setPromptInput] = useState('')
 
   // Plan Actions state
   const [currentPlanState, setCurrentPlanState] = useState<'default' | 'regenerated' | 'accepted' | 'rejected'>('default')
-  const [isRegenerating, setIsRegenerating] = useState(false)
 
-  const schedule = currentPlanState === 'regenerated' ? regeneratedDailySchedule : initialDailySchedule
+  useEffect(() => {
+    fetchTasks()
+    fetchHabits()
+  }, [fetchTasks, fetchHabits])
 
-  const handleSendPrompt = (e: React.FormEvent) => {
+  const handleSendPrompt = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!promptInput.trim()) return
 
     const userMsg = promptInput
-    setMessages((prev) => [...prev, { sender: 'user', text: userMsg }])
     setPromptInput('')
 
-    // Simulated AI schedule change
-    setTimeout(() => {
-      let reply = "Understood. I've re-prioritized your pitch deck draft to 9:00 AM as requested. Click 'Regenerate' to preview the updated schedule."
-      if (userMsg.toLowerCase().includes('database') || userMsg.toLowerCase().includes('index')) {
-        reply = "Acknowledged. Keeping your database indexes optimization in the morning window to optimize server traffic."
-      }
-      setMessages((prev) => [...prev, { sender: 'ai', text: reply }])
-    }, 1000)
+    const habitsList = habits.map((h) => `${h.name} (streak: ${h.streak})`)
+    const streaksData = habits.map((h) => `${h.name}: ${h.streak} days`).join(', ')
+
+    await sendMessageToCoach(userMsg, habitsList, streaksData)
   }
 
-  const handleRegenerate = () => {
-    setIsRegenerating(true)
-    setTimeout(() => {
-      setCurrentPlanState('regenerated')
-      setIsRegenerating(false)
-      addToast({
-        type: 'info',
-        title: 'Plan Regenerated',
-        message: 'Proposed schedule updated according to preferences.',
-      })
-    }, 1200)
+  const handleRegenerate = async () => {
+    const taskTitles = tasks.map((t) => `${t.title} (${t.priority} priority)`)
+    await generateDailyPlan(taskTitles, [])
+    setCurrentPlanState('regenerated')
+    addToast({
+      type: 'info',
+      title: 'Plan Regenerated',
+      message: 'Proposed schedule updated according to active tasks.',
+    })
   }
 
   const handleAccept = () => {
@@ -126,9 +110,9 @@ export const AiPlannerPage: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleRegenerate}
-            disabled={isRegenerating}
+            disabled={isPlanning}
             className="h-9 px-3 gap-1.5"
-            leftIcon={<RefreshCw className={isRegenerating ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />}
+            leftIcon={<RefreshCw className={isPlanning ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />}
           >
             Regenerate
           </Button>
@@ -165,7 +149,7 @@ export const AiPlannerPage: React.FC = () => {
                   plannerTab === 'daily' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Daily Schedule
+                Proposed Plan
               </button>
               <button
                 onClick={() => setPlannerTab('weekly')}
@@ -173,75 +157,89 @@ export const AiPlannerPage: React.FC = () => {
                   plannerTab === 'weekly' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Weekly Focus
+                Backlog Tasks
               </button>
             </div>
             <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4" /> Today: June 28
+              <CalendarDays className="h-4 w-4" /> Energy Schedule
             </span>
           </div>
 
           {/* Render Daily Time-Blocking */}
           {plannerTab === 'daily' && (
-            <div className="space-y-4">
-              {schedule.map((slot, index) => (
-                <div
-                  key={index}
-                  className="flex gap-4 items-start"
-                >
-                  <div className="w-36 text-xs text-muted-foreground font-bold pt-2">{slot.time}</div>
-                  <div className="flex-grow p-4 rounded-xl border border-border bg-card hover:border-primary/20 transition-all flex items-center justify-between shadow-sm relative overflow-hidden">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-foreground">{slot.task}</h4>
-                        <Badge variant="secondary" className="text-[9px]">{slot.category}</Badge>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground block">Duration: {slot.duration}</span>
-                    </div>
-                    <Badge variant={slot.priority === 'urgent' ? 'destructive' : slot.priority === 'high' ? 'warning' : 'outline'}>
-                      {slot.priority}
-                    </Badge>
-                  </div>
+            <div className="space-y-4 text-left">
+              {isPlanning ? (
+                <div className="py-20 text-center space-y-3">
+                  <RefreshCw className="h-8 w-8 animate-spin text-primary mx-auto" />
+                  <p className="text-xs text-muted-foreground">AI is scheduling and prioritizing tasks...</p>
                 </div>
-              ))}
+              ) : dailyPlan ? (
+                <Card className="p-6 overflow-x-auto">
+                  <div className="prose dark:prose-invert max-w-none text-xs leading-relaxed text-left space-y-4
+                    [&_table]:w-full [&_table]:border-collapse [&_table]:my-4
+                    [&_th]:border-b [&_th]:border-border [&_th]:p-3 [&_th]:text-left [&_th]:font-bold [&_th]:bg-secondary/20
+                    [&_td]:border-b [&_td]:border-border/60 [&_td]:p-3 [&_td]:text-left
+                    [&_tr:hover]:bg-secondary/10 [&_tr]:transition-colors
+                    [&_h3]:text-base [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-primary
+                    [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ul]:my-2
+                    [&_li]:text-muted-foreground [&_strong]:text-foreground [&_strong]:font-semibold">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {dailyPlan}
+                    </ReactMarkdown>
+                  </div>
+                </Card>
+              ) : (
+                <div className="py-20 text-center space-y-4">
+                  <p className="text-xs text-muted-foreground">Ready to optimize your schedule with AI?</p>
+                  <Button variant="primary" size="sm" onClick={handleRegenerate} leftIcon={<Brain className="h-4 w-4" />}>
+                    Generate Daily Plan
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
           {/* Render Weekly Focus planner */}
           {plannerTab === 'weekly' && (
             <div className="space-y-3">
-              {initialWeeklySchedule.map((slot, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-xl border border-border bg-card flex items-center justify-between"
-                >
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-foreground">{slot.day}</h4>
-                    <p className="text-xs text-muted-foreground">{slot.focus}</p>
+              {tasks.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-10 text-center">No tasks in your backlog right now.</p>
+              ) : (
+                tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="p-4 rounded-xl border border-border bg-card flex items-center justify-between"
+                  >
+                    <div className="space-y-1 text-left">
+                      <h4 className="text-sm font-bold text-foreground">{task.title}</h4>
+                      <p className="text-xs text-muted-foreground">{task.description || 'No description'}</p>
+                    </div>
+                    <Badge variant={task.priority === 'urgent' ? 'destructive' : task.priority === 'high' ? 'warning' : 'outline'}>
+                      {task.priority}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="h-6">{slot.duration}</Badge>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
 
         {/* Right Column: AI Explanations, tips, and chat window */}
         <div className="space-y-6">
-          {/* Why This proposed plan? explanations card */}
+          {/* Why Proposed plan? explanations card */}
           <Card>
             <CardHeader className="border-b border-border/40 pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-primary" />
-                Priority Explanations
+                Schedule Logic
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-3 text-xs text-muted-foreground leading-relaxed space-y-2">
+            <CardContent className="pt-3 text-xs text-muted-foreground leading-relaxed space-y-2 text-left">
               <p>
-                • Grouped <span className="font-semibold text-foreground">deep work coding blocks</span> in the morning window when cognitive stamina peaks.
+                • Groups high-priority tasks in early time-blocks.
               </p>
               <p>
-                • Slotted communication tasks right before lunch when cognitive reserves drop.
+                • Organizes tasks according to standard cognitive energy peaks.
               </p>
             </CardContent>
           </Card>
@@ -254,17 +252,17 @@ export const AiPlannerPage: React.FC = () => {
                 Productivity Tips
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-3 text-xs text-muted-foreground leading-relaxed space-y-2">
+            <CardContent className="pt-3 text-xs text-muted-foreground leading-relaxed space-y-2 text-left">
               <p>
-                • Use a Pomodoro structure for index optimization tasks.
+                • Keep notifications muted during deep work coding blocks.
               </p>
               <p>
-                • Block desktop alerts during slide preparation deep work.
+                • Use habit streaks to build consistent daily momentum.
               </p>
             </CardContent>
           </Card>
 
-          {/* Beautiful chat interface */}
+          {/* Chat interface */}
           <Card className="flex flex-col h-96">
             <CardHeader className="border-b border-border/40 pb-3 bg-secondary/15">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -273,13 +271,13 @@ export const AiPlannerPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <div className="flex-1 p-3 overflow-y-auto space-y-3">
-              {messages.map((msg, idx) => (
+              {chatHistory.map((msg, idx) => (
                 <div
                   key={idx}
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs leading-normal ${
+                    className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs leading-normal text-left ${
                       msg.sender === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-secondary text-foreground border border-border'
@@ -289,16 +287,24 @@ export const AiPlannerPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+              {isCoaching && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs leading-normal bg-secondary text-muted-foreground border border-border animate-pulse">
+                    Typing...
+                  </div>
+                </div>
+              )}
             </div>
             <form onSubmit={handleSendPrompt} className="p-3 border-t border-border flex gap-2 bg-secondary/5">
               <input
                 type="text"
                 placeholder="Suggest schedule tweaks..."
                 value={promptInput}
+                disabled={isCoaching}
                 onChange={(e) => setPromptInput(e.target.value)}
-                className="flex-grow h-9 px-3 py-1.5 rounded-md border border-input bg-background text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex-grow h-9 px-3 py-1.5 rounded-md border border-input bg-background text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               />
-              <Button type="submit" size="sm" className="h-9 w-9 p-0">
+              <Button type="submit" size="sm" className="h-9 w-9 p-0" disabled={isCoaching}>
                 <Send className="h-3.5 w-3.5" />
               </Button>
             </form>

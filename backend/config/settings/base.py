@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'apps.tasks',
     'apps.goals_habits',
     'apps.google_calendar',
+    'apps.ai_assistant',
+    'apps.ai_chatbot',
 ]
 
 MIDDLEWARE = [

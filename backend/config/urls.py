@@ -14,4 +14,6 @@ urlpatterns = [
     # API Versioning endpoints
     path('api/v1/auth/', include('apps.authentication.urls', namespace='auth')),
     path('api/v1/', include('apps.tasks.urls', namespace='tasks')),
+    path('api/v1/', include('apps.goals_habits.urls', namespace='goals_habits')),
+    path('api/v1/calendar/', include('apps.google_calendar.urls', namespace='google_calendar')),
 ]

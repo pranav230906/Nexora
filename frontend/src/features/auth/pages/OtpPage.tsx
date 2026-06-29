@@ -100,7 +100,7 @@ export const OtpPage: React.FC = () => {
     setLoading(true)
     try {
       // Call verify-otp endpoint
-      await apiClient.post('/auth/verify-otp/', {
+      const response = await apiClient.post('/auth/verify-otp/', {
         email,
         code,
         purpose: action
@@ -113,7 +113,7 @@ export const OtpPage: React.FC = () => {
       })
 
       if (action === 'reset') {
-        navigate('/reset-password', { state: { email } })
+        navigate('/reset-password', { state: { email, token: response.data.token } })
       } else {
         // Complete signup redirect
         navigate('/login')

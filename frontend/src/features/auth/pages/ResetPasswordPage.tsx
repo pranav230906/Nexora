@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { PasswordStrength } from '../components/PasswordStrength'
 import { useToastStore } from '@/store/useToastStore'
 import { useAppStore } from '@/store/useAppStore'
+import apiClient from '@/services/apiClient'
 
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ export const ResetPasswordPage: React.FC = () => {
   const { isLoading, setLoading } = useAppStore()
 
   const email = location.state?.email || 'user@example.com'
+  const token = location.state?.token || ''
 
   const {
     register,
@@ -30,9 +32,20 @@ export const ResetPasswordPage: React.FC = () => {
   const passwordVal = watch('password', '')
 
   const onSubmit = async (data: any) => {
+    if (!token) {
+      addToast({
+        type: 'error',
+        message: 'Password reset token is missing. Please start over.',
+      })
+      return
+    }
+
     setLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await apiClient.post('/auth/reset-password/', {
+        token,
+        password: data.password,
+      })
 
       addToast({
         type: 'success',
@@ -41,10 +54,10 @@ export const ResetPasswordPage: React.FC = () => {
       })
 
       navigate('/login')
-    } catch (err) {
+    } catch (err: any) {
       addToast({
         type: 'error',
-        message: 'Failed to reset password.',
+        message: err.message || 'Failed to reset password.',
       })
     } finally {
       setLoading(false)

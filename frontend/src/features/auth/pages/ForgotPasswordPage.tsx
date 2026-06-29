@@ -5,6 +5,7 @@ import { InputField } from '@/components/form/InputField'
 import { Button } from '@/components/ui/Button'
 import { useToastStore } from '@/store/useToastStore'
 import { useAppStore } from '@/store/useAppStore'
+import apiClient from '@/services/apiClient'
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate()
@@ -24,7 +25,10 @@ export const ForgotPasswordPage: React.FC = () => {
   const onSubmit = async (data: any) => {
     setLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await apiClient.post('/auth/send-otp/', {
+        email: data.email,
+        purpose: 'reset',
+      })
 
       addToast({
         type: 'success',
@@ -34,10 +38,10 @@ export const ForgotPasswordPage: React.FC = () => {
 
       // Navigate to OTP page for resetting
       navigate('/otp-verification', { state: { email: data.email, action: 'reset' } })
-    } catch (err) {
+    } catch (err: any) {
       addToast({
         type: 'error',
-        message: 'Something went wrong.',
+        message: err.message || 'Failed to send reset code.',
       })
     } finally {
       setLoading(false)

@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     # Internal Apps
     'apps.authentication',
     'apps.tasks',
+    'apps.goals_habits',
+    'apps.google_calendar',
 ]
 
 MIDDLEWARE = [

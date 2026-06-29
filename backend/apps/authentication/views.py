@@ -234,13 +234,17 @@ class VerifyOTPView(views.APIView):
             # Successfully verified!
             otp_record.delete() # Consume the OTP
             
+            token = None
             if purpose == 'signup':
                 user.is_email_verified = True
                 user.save()
+            elif purpose == 'reset':
+                token = signer.sign(user.email)
 
             return Response({
                 "message": "OTP code verified successfully.",
-                "verified": True
+                "verified": True,
+                "token": token
             }, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:

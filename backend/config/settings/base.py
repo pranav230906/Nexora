@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.gamification',
     'apps.analytics',
+    'apps.sync',
 ]
 
 MIDDLEWARE = [

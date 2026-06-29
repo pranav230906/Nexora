@@ -3,13 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { WifiOff } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { useToastStore } from '@/store/useToastStore'
+import apiClient from '@/services/apiClient'
+import { useTaskStore } from '@/features/tasks/store/useTaskStore'
+
+export interface SyncOperation {
+  action: 'CREATE' | 'UPDATE' | 'DELETE'
+  model_name: 'Task' | 'Habit' | 'Goal'
+  object_id: string
+  client_timestamp: string
+  data: any
+}
 
 interface OfflineContextType {
   isOnline: boolean
   syncQueueCount: number
-  addToSyncQueue: (action: string, payload: any) => void
+  addToSyncQueue: (op: Omit<SyncOperation, 'client_timestamp'>) => void
   triggerPwaInstall: () => void
   isInstallable: boolean
+  syncOfflineQueue: () => Promise<void>
 }
 
 const OfflineContext = createContext<OfflineContextType | undefined>(undefined)
@@ -20,11 +31,47 @@ export const OfflineProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Online connection state
   const [isOnline, setIsOnline] = useState(navigator.onLine)
 
-  // Sync Queue mock state
-  const [syncQueue, setSyncQueue] = useState<Array<{ action: string; payload: any }>>([])
+  // Sync Queue state
+  const [syncQueue, setSyncQueue] = useState<SyncOperation[]>([])
 
   // PWA install prompt state
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+
+  const syncOfflineQueue = async () => {
+    if (syncQueue.length === 0) return
+
+    try {
+      const lastSyncTime = localStorage.getItem('last_sync_time') || new Date(0).toISOString()
+      
+      const response = await apiClient.post('/sync/', {
+        device_id: 'web-browser-client',
+        last_sync_time: lastSyncTime,
+        queue: syncQueue
+      })
+
+      const { sync_time, operations_applied } = response.data
+      localStorage.setItem('last_sync_time', sync_time)
+      
+      // Clear queue
+      setSyncQueue([])
+
+      // Force refresh tasks store to sync with server delta upserts/deletes
+      await useTaskStore.getState().fetchTasks()
+
+      addToast({
+        type: 'success',
+        title: 'Database Synced',
+        message: `Successfully synchronized ${operations_applied} offline actions and updated database delta.`,
+      })
+    } catch (err) {
+      console.error('Failed to sync offline queue:', err)
+      addToast({
+        type: 'error',
+        title: 'Sync Failed',
+        message: 'Could not contact synchronization gateway. Queue preserved.',
+      })
+    }
+  }
 
   useEffect(() => {
     const handleOnline = () => {
@@ -34,18 +81,7 @@ export const OfflineProvider: React.FC<{ children: React.ReactNode }> = ({ child
         title: 'Connection Restored',
         message: 'Synchronizing offline tasks queue...',
       })
-
-      // Simulate syncing IndexedDB queue
-      if (syncQueue.length > 0) {
-        setTimeout(() => {
-          setSyncQueue([])
-          addToast({
-            type: 'success',
-            title: 'Database Synced',
-            message: 'All offline modifications synced successfully.',
-          })
-        }, 1500)
-      }
+      syncOfflineQueue()
     }
 
     const handleOffline = () => {
@@ -74,8 +110,12 @@ export const OfflineProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [syncQueue, addToast])
 
-  const addToSyncQueue = (action: string, payload: any) => {
-    setSyncQueue((prev) => [...prev, { action, payload }])
+  const addToSyncQueue = (op: Omit<SyncOperation, 'client_timestamp'>) => {
+    const fullOp: SyncOperation = {
+      ...op,
+      client_timestamp: new Date().toISOString()
+    }
+    setSyncQueue((prev) => [...prev, fullOp])
     addToast({
       type: 'info',
       title: 'Action Queued',
@@ -110,6 +150,7 @@ export const OfflineProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addToSyncQueue,
         triggerPwaInstall,
         isInstallable: !!deferredPrompt,
+        syncOfflineQueue
       }}
     >
       {children}

@@ -1,151 +1,86 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Trophy,
   Coins,
   Shield,
-  CheckCircle,
   Lock,
   Compass,
-  Star,
   Award,
   Sparkles,
   Flame,
-  Volume2,
+  User,
+  Users,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { useToastStore } from '@/store/useToastStore'
+import { useGamificationStore } from '@/store/useGamificationStore'
 import { cn } from '@/utils/cn'
-
-// Dummy Data
-interface Quest {
-  id: string
-  title: string
-  rewardXp: number
-  rewardCoins: number
-  completed: boolean
-  claimed: boolean
-}
-
-interface Achievement {
-  id: string
-  title: string
-  description: string
-  unlocked: boolean
-  icon: string
-}
-
-interface ShopItem {
-  id: string
-  title: string
-  cost: number
-  description: string
-  unlocked: boolean
-}
-
-const initialQuests: Quest[] = [
-  { id: 'q1', title: 'Complete 1 Pomodoro session', rewardXp: 100, rewardCoins: 20, completed: true, claimed: false },
-  { id: 'q2', title: 'Check off 3 high priority tasks', rewardXp: 150, rewardCoins: 30, completed: false, claimed: false },
-  { id: 'q3', title: 'Maintain a 7-day habit streak', rewardXp: 200, rewardCoins: 50, completed: true, claimed: false },
-]
-
-const initialAchievements: Achievement[] = [
-  { id: 'a1', title: 'Focus King', description: 'Complete 10 Pomodoro sessions in a week.', unlocked: true, icon: '👑' },
-  { id: 'a2', title: 'Deadline Hero', description: 'Complete an urgent task before it defaults.', unlocked: true, icon: '⚡' },
-  { id: 'a3', title: 'Consistency Pro', description: 'Log a 30-day streak on daily coding.', unlocked: false, icon: '🔥' },
-]
-
-const initialShopItems: ShopItem[] = [
-  { id: 's1', title: 'Lo-Fi Focus Beats Pack', cost: 100, description: 'Unlock premium relaxing music tracks.', unlocked: false },
-  { id: 's2', title: 'Retro Terminal Theme', cost: 200, description: 'Unlock a nostalgic green-phosphor CLI UI layout.', unlocked: false },
-  { id: 's3', title: 'Priority AI Co-Pilot', cost: 400, description: 'Upgrade your AI coach with custom voice prompts.', unlocked: false },
-]
 
 export const GamificationPage: React.FC = () => {
   const addToast = useToastStore((state) => state.addToast)
 
-  // Gamification Metrics
-  const [level, setLevel] = useState(14)
-  const [xp, setXp] = useState(1850)
-  const maxXp = 2000
-  const [coins, setCoins] = useState(450)
-
-  // Interactive Quests & Shop state
-  const [quests, setQuests] = useState<Quest[]>(initialQuests)
-  const [shopItems, setShopItems] = useState<ShopItem[]>(initialShopItems)
+  const {
+    profile,
+    achievements,
+    challenges,
+    leaderboard,
+    isLoading,
+    fetchProfile,
+    fetchAchievements,
+    fetchChallenges,
+    fetchLeaderboard
+  } = useGamificationStore()
 
   // Level Up modal & Confetti Trigger
   const [levelUpOpen, setLevelUpOpen] = useState(false)
   const [confettiActive, setConfettiActive] = useState(false)
+  const [lastSeenLevel, setLastSeenLevel] = useState<number | null>(null)
 
-  const triggerLevelUp = () => {
-    setLevelUpOpen(true)
-    setConfettiActive(true)
-    // Deactivate confetti after some seconds
-    setTimeout(() => setConfettiActive(false), 5000)
-  }
+  useEffect(() => {
+    fetchProfile()
+    fetchAchievements()
+    fetchChallenges()
+    fetchLeaderboard()
+  }, [fetchProfile, fetchAchievements, fetchChallenges, fetchLeaderboard])
 
-  const handleClaimReward = (questId: string) => {
-    setQuests((prev) =>
-      prev.map((q) => {
-        if (q.id === questId) {
-          const newXp = xp + q.rewardXp
-          setCoins((c) => c + q.rewardCoins)
-
-          addToast({
-            type: 'success',
-            title: 'Reward Claimed!',
-            message: `+${q.rewardXp} XP and +${q.rewardCoins} Coins added.`,
-          })
-
-          // Check if user leveled up
-          if (newXp >= maxXp) {
-            setXp(newXp - maxXp)
-            setLevel((l) => l + 1)
-            setTimeout(() => triggerLevelUp(), 400)
-          } else {
-            setXp(newXp)
-          }
-
-          return { ...q, claimed: true }
-        }
-        return q
-      }),
-    )
-  }
-
-  const handlePurchaseItem = (item: ShopItem) => {
-    if (coins < item.cost) {
-      addToast({
-        type: 'warning',
-        title: 'Insufficient Coins',
-        message: `You need ${item.cost - coins} more coins to purchase this.`,
-      })
-      return
+  // Watch for Level Ups
+  useEffect(() => {
+    if (profile) {
+      if (lastSeenLevel !== null && profile.level > lastSeenLevel) {
+        setLevelUpOpen(true)
+        setConfettiActive(true)
+        setTimeout(() => setConfettiActive(false), 5000)
+      }
+      setLastSeenLevel(profile.level)
     }
+  }, [profile, lastSeenLevel])
 
-    setCoins((c) => c - item.cost)
-    setShopItems((prev) => prev.map((s) => (s.id === item.id ? { ...s, unlocked: true } : s)))
-
-    addToast({
-      type: 'success',
-      title: 'Item Unlocked!',
-      message: `"${item.title}" successfully purchased and added to settings.`,
-    })
+  // Formula for XP target to reach next level: (level * 10)^2
+  const getXpThresholds = () => {
+    if (!profile) return { minXp: 0, maxXp: 100 }
+    const currentLevel = profile.level
+    const minXp = currentLevel === 1 ? 0 : Math.pow((currentLevel - 1) * 10, 2)
+    const maxXp = Math.pow(currentLevel * 10, 2)
+    return { minXp, maxXp }
   }
+
+  const { minXp, maxXp } = getXpThresholds()
+  const relativeXp = profile ? profile.xp - minXp : 0
+  const relativeMaxXp = maxXp - minXp
 
   // Simulated Confetti Particles
   const renderConfetti = () => {
     return (
       <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
         {Array.from({ length: 45 }).map((_, i) => {
-          const xStart = Math.random() * 100 // percentage
-          const duration = Math.random() * 2 + 1.5 // seconds
+          const xStart = Math.random() * 100
+          const duration = Math.random() * 2 + 1.5
           const delay = Math.random() * 1.5
-          const size = Math.random() * 8 + 6 // px
+          const size = Math.random() * 8 + 6
           const colors = ['bg-amber-400', 'bg-red-400', 'bg-blue-400', 'bg-emerald-400', 'bg-indigo-400']
           const randomColor = colors[Math.floor(Math.random() * colors.length)]
 
@@ -176,7 +111,6 @@ export const GamificationPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 relative">
-      {/* Dynamic Confetti Shower */}
       {confettiActive && renderConfetti()}
 
       {/* Page Header */}
@@ -186,158 +120,211 @@ export const GamificationPage: React.FC = () => {
             <Trophy className="h-7 w-7 text-primary" />
             Gamification Engine
           </h1>
-          <p className="text-sm text-muted-foreground">Complete challenges, earn coins, and unlock customizations.</p>
+          <p className="text-sm text-muted-foreground">Complete challenges, earn coins, and rank up on the leaderboard.</p>
         </div>
       </div>
 
-      {/* 1. Status Dashboard row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Level & XP progression */}
-        <Card className="md:col-span-2 relative overflow-hidden bg-primary/5 border-primary/20">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Progression Meter</span>
-            <Shield className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-baseline">
-              <span className="font-display font-black text-3xl">Level {level}</span>
-              <span className="text-xs font-bold text-muted-foreground">{xp} / {maxXp} XP</span>
-            </div>
-            <Progress value={(xp / maxXp) * 100} className="h-3" color="bg-primary" />
-          </CardContent>
-        </Card>
+      {/* 1. Status Dashboard Row */}
+      {profile ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="md:col-span-2 relative overflow-hidden bg-primary/5 border-primary/20 text-left">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Progression Meter</span>
+              <Shield className="h-5 w-5 text-primary" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-baseline">
+                <span className="font-display font-black text-3xl">Level {profile.level}</span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {profile.xp} / {maxXp} XP
+                </span>
+              </div>
+              <Progress value={(relativeXp / relativeMaxXp) * 100} className="h-3" color="bg-primary" />
+            </CardContent>
+          </Card>
 
-        {/* Currency balance */}
-        <Card>
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vault Balance</span>
-            <Coins className="h-5 w-5 text-amber-500" />
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="font-display font-black text-3xl">{coins}</span>
-              <span className="text-xs font-bold text-amber-500">Coins</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">Complete challenges to earn more.</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="text-left">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vault Balance & Streak</span>
+              <Coins className="h-5 w-5 text-amber-500" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-display font-black text-3xl">{profile.coins}</span>
+                  <span className="text-xs font-bold text-amber-500 ml-1">Coins</span>
+                </div>
+                <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 text-orange-500 px-2 py-0.5 rounded-full">
+                  <Flame className="h-4 w-4 fill-current" />
+                  <span className="text-xs font-black">{profile.streak_days} Days</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Complete tasks and build habits to earn reward items.</p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="py-10 text-center text-xs text-muted-foreground">Loading profile...</div>
+      )}
 
       {/* 2. Main Page Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Quests & Rewards Shop */}
+        {/* Left Columns: Challenges & Achievements */}
         <div className="lg:col-span-2 space-y-6">
           {/* Challenges List */}
           <Card>
-            <CardHeader className="pb-3 border-b border-border/40">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Compass className="h-4 w-4 text-primary" /> Today's Quests & Challenges
+            <CardHeader className="pb-3 border-b border-border/40 bg-secondary/5">
+              <CardTitle className="text-sm flex items-center gap-2 text-left">
+                <Compass className="h-4 w-4 text-primary" /> Active Missions & Challenges
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-3 space-y-3">
-              {quests.map((quest) => (
-                <div
-                  key={quest.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/5"
-                >
-                  <div className="space-y-1">
-                    <h5 className="text-xs font-bold text-foreground">{quest.title}</h5>
-                    <div className="flex gap-2">
-                      <span className="text-[10px] text-primary font-bold">+{quest.rewardXp} XP</span>
-                      <span className="text-[10px] text-amber-500 font-bold">+{quest.rewardCoins} Coins</span>
+              {isLoading ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">Loading missions...</div>
+              ) : challenges.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-8 text-center">No active missions available.</p>
+              ) : (
+                challenges.map((ch) => (
+                  <div
+                    key={ch.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border bg-secondary/5 gap-4"
+                  >
+                    <div className="space-y-1 text-left flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h5 className="text-xs font-bold text-foreground">{ch.title}</h5>
+                        <Badge variant="secondary" className="text-[9px] font-black uppercase">
+                          {ch.type}
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{ch.description}</p>
+                      
+                      {/* Challenge progress bar */}
+                      <div className="flex items-center gap-3 pt-1">
+                        <Progress value={(ch.current_value / ch.target_value) * 100} className="h-2 flex-grow max-w-[200px]" color="bg-emerald-500" />
+                        <span className="text-[9px] font-bold text-muted-foreground shrink-0">{ch.current_value} / {ch.target_value}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 justify-between sm:justify-end">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[9px] text-primary font-bold">+{ch.xp_reward} XP</span>
+                        <span className="text-[9px] text-amber-500 font-bold">+{ch.coins_reward} Coins</span>
+                      </div>
+                      {ch.is_completed ? (
+                        <Badge className="bg-emerald-500/10 border-emerald-500/20 text-emerald-500 text-xs px-2.5 py-0.5">
+                          Completed
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          Active
+                        </Badge>
+                      )}
                     </div>
                   </div>
-
-                  {quest.claimed ? (
-                    <Badge variant="outline" className="text-xs">Claimed</Badge>
-                  ) : quest.completed ? (
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => handleClaimReward(quest.id)}
-                      className="h-8 text-[10px] px-3 font-semibold uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 border-none"
-                    >
-                      Claim
-                    </Button>
-                  ) : (
-                    <Badge variant="secondary" className="text-xs">In Progress</Badge>
-                  )}
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
 
-          {/* Rewards Shop */}
+          {/* Achievements shelf */}
           <Card>
-            <CardHeader className="pb-3 border-b border-border/40">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Coins className="h-4 w-4 text-amber-500" /> Unlockable Customizations
+            <CardHeader className="pb-3 border-b border-border/40 bg-secondary/5">
+              <CardTitle className="text-sm flex items-center gap-2 text-left">
+                <Award className="h-4 w-4 text-amber-500" /> Achievements Shelf
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-3 space-y-3">
-              {shopItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/5"
-                >
-                  <div className="space-y-1 text-left">
-                    <h5 className="text-xs font-bold text-foreground">{item.title}</h5>
-                    <p className="text-[10px] text-muted-foreground">{item.description}</p>
-                    <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
-                      Cost: {item.cost} Coins
+            <CardContent className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {achievements.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-8 text-center col-span-2">No achievements loaded.</p>
+              ) : (
+                achievements.map((ach) => (
+                  <div
+                    key={ach.id}
+                    className={cn(
+                      'p-3 rounded-xl border flex items-center gap-3 transition-all',
+                      ach.is_unlocked
+                        ? 'bg-secondary/10 border-border'
+                        : 'bg-secondary/5 border-border/40 opacity-55'
+                    )}
+                  >
+                    <span className="text-2xl shrink-0">
+                      {ach.is_unlocked ? '🏆' : '🔒'}
                     </span>
+                    <div className="space-y-1 text-left flex-grow min-w-0">
+                      <h5 className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                        {ach.title}
+                      </h5>
+                      <p className="text-[9px] text-muted-foreground leading-normal line-clamp-2">
+                        {ach.description}
+                      </p>
+                      <div className="flex gap-2 text-[8px] font-bold">
+                        <span className="text-primary">+{ach.xp_reward} XP</span>
+                        <span className="text-amber-500">+{ach.coins_reward} Coins</span>
+                      </div>
+                    </div>
                   </div>
-
-                  {item.unlocked ? (
-                    <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/20 bg-emerald-500/5">
-                      Unlocked
-                    </Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handlePurchaseItem(item)}
-                      className="h-8 text-[10px] px-3 font-semibold"
-                    >
-                      Buy
-                    </Button>
-                  )}
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column: Achievements & Badges shelf */}
+        {/* Right Column: Leaderboard stand */}
         <div className="space-y-6">
           <Card>
-            <CardHeader className="pb-3 border-b border-border/40">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Award className="h-4 w-4 text-amber-500" /> Achievements Shelf
+            <CardHeader className="pb-3 border-b border-border/40 bg-secondary/5">
+              <CardTitle className="text-sm flex items-center gap-2 text-left">
+                <Users className="h-4 w-4 text-primary" /> Global Leaderboard
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-3 space-y-4">
-              {initialAchievements.map((ach) => (
-                <div
-                  key={ach.id}
-                  className={cn(
-                    'p-3 rounded-xl border flex items-center gap-3',
-                    ach.unlocked ? 'bg-secondary/15 border-border' : 'bg-secondary/5 border-border/40 opacity-55'
-                  )}
-                >
-                  <span className="text-2xl">{ach.icon}</span>
-                  <div className="space-y-1 text-left flex-1 min-w-0">
-                    <h5 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      {ach.title}
-                      {!ach.unlocked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                    </h5>
-                    <p className="text-[10px] text-muted-foreground leading-normal break-words">
-                      {ach.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <CardContent className="pt-3 divide-y divide-border/60">
+              {leaderboard.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-6 text-center">Leaderboard is empty.</p>
+              ) : (
+                leaderboard.map((user) => {
+                  const isCurrentUser = profile && user.email === profile.email
+
+                  return (
+                    <div
+                      key={user.email}
+                      className={cn(
+                        'py-2.5 flex items-center justify-between gap-3 text-left',
+                        isCurrentUser && 'bg-primary/5 rounded-lg px-2 -mx-2 border border-primary/10'
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={cn(
+                          'w-5 text-center text-xs font-black shrink-0',
+                          user.rank === 1 ? 'text-amber-500' : user.rank === 2 ? 'text-slate-400' : user.rank === 3 ? 'text-amber-700' : 'text-muted-foreground'
+                        )}>
+                          #{user.rank}
+                        </span>
+                        <div className="min-w-0">
+                          <h6 className="text-xs font-bold text-foreground truncate">
+                            {user.username}
+                          </h6>
+                          <span className="text-[9px] text-muted-foreground block">
+                            Level {user.level}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-black text-foreground">
+                          {user.xp} <span className="text-[9px] font-normal text-muted-foreground">XP</span>
+                        </span>
+                        {user.streak_days > 0 && (
+                          <div className="flex items-center gap-0.5 text-orange-500 text-[9px] font-black">
+                            <Flame className="h-3 w-3 fill-current" />
+                            {user.streak_days}d
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </CardContent>
           </Card>
         </div>
@@ -364,14 +351,14 @@ export const GamificationPage: React.FC = () => {
             >
               <div className="relative">
                 <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-black">
-                  L
+                  {profile?.level}
                 </div>
                 <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-amber-400 animate-bounce" />
               </div>
 
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Level Up Celebration</span>
-                <h2 className="font-display font-black text-2xl text-foreground">Level {level} Reached!</h2>
+                <h2 className="font-display font-black text-2xl text-foreground">Level {profile?.level} Reached!</h2>
                 <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
                   Excellent work! Your cognitive stamina is breaking records. You've earned bonus vault tokens.
                 </p>

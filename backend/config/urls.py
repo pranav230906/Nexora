@@ -19,4 +19,5 @@ urlpatterns = [
     path('api/v1/ai/', include('apps.ai_assistant.urls', namespace='ai_assistant')),
     path('api/v1/chatbot/', include('apps.ai_chatbot.urls', namespace='ai_chatbot')),
     path('api/v1/notifications/', include('apps.notifications.urls', namespace='notifications')),
+    path('api/v1/gamification/', include('apps.gamification.urls', namespace='gamification')),
 ]

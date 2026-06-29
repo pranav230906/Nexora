@@ -46,7 +46,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ trigger, items, align = 'rig
             exit={{ opacity: 0, scale: 0.95, y: 5 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              'absolute z-50 mt-2 w-48 rounded-md border border-border bg-card p-1 text-card-foreground shadow-lg backdrop-blur-md focus:outline-none min-w-[12rem]',
+              'absolute z-50 mt-2 rounded-xl border border-border/80 bg-card/95 p-1 text-card-foreground shadow-lg shadow-black/5 backdrop-blur-md focus:outline-none min-w-[12rem]',
               align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left',
               className,
             )}
@@ -63,7 +63,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ trigger, items, align = 'rig
                     }
                   }}
                   className={cn(
-                    'flex items-center gap-2 w-full px-3 py-1.5 text-sm font-medium rounded-sm text-left transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-40',
+                    'flex items-center gap-2 w-full px-3 py-1.5 text-xs font-semibold rounded-lg text-left transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-40',
                     item.destructive
                       ? 'text-red-500 hover:bg-red-500/10 hover:text-red-600'
                       : 'text-foreground hover:bg-secondary hover:text-accent-foreground',

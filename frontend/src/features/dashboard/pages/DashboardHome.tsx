@@ -32,6 +32,7 @@ import { Progress } from '@/components/ui/Progress'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { useToastStore } from '@/store/useToastStore'
+import { useTaskStore } from '@/features/tasks/store/useTaskStore'
 
 // Dummy Data
 const chartData = [
@@ -86,31 +87,47 @@ export const DashboardHome: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Interactive Task List State
-  const [tasks, setTasks] = useState([
-    { id: '1', title: 'Complete pitch deck draft', completed: false, urgency: 'high' },
-    { id: '2', title: 'Optimize database schemas', completed: true, urgency: 'medium' },
-    { id: '3', title: 'Review API response formats', completed: false, urgency: 'low' },
-  ])
+  const { tasks, fetchTasks, updateTask } = useTaskStore()
 
-  const toggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const nextState = !t.completed
-          if (nextState) {
-            addToast({
-              type: 'success',
-              title: 'Task Done!',
-              message: `"${t.title}" checked off. +100 XP`,
-            })
-          }
-          return { ...t, completed: nextState }
-        }
-        return t
-      }),
-    )
+  useEffect(() => {
+    fetchTasks()
+  }, [fetchTasks])
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const todaysTasks = tasks.filter((task) => {
+    return task.dueDate === todayStr || (!task.dueDate && task.status !== 'completed')
+  })
+
+  const toggleTask = async (id: string) => {
+    const task = tasks.find((t) => t.id === id)
+    if (!task) return
+
+    const newStatus = task.status === 'completed' ? 'todo' : 'completed'
+    try {
+      await updateTask(id, { status: newStatus })
+      addToast({
+        type: 'success',
+        title: newStatus === 'completed' ? 'Task Completed' : 'Task Re-opened',
+        message: `"${task.title}" updated successfully.`,
+      })
+    } catch (err) {
+      console.error('Failed to update task status:', err)
+      addToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Could not update task status.',
+      })
+    }
   }
+
+  // Calculations based on live tasks
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter(t => t.status === 'completed').length
+  const productivityScore = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+  const totalTodayTasks = todaysTasks.length
+  const completedTodayTasks = todaysTasks.filter(t => t.status === 'completed').length
+  const todayProgress = totalTodayTasks > 0 ? Math.round((completedTodayTasks / totalTodayTasks) * 100) : 0
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
@@ -123,22 +140,26 @@ export const DashboardHome: React.FC = () => {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-display">88%</div>
-            <p className="text-[10px] text-emerald-500 font-medium mt-1">+12% vs last week</p>
-            <Progress value={88} className="mt-3 bg-secondary" color="bg-primary" />
+            <div className="text-2xl font-bold font-display">{productivityScore}%</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Completed {completedTasks} of {totalTasks} total tasks
+            </p>
+            <Progress value={productivityScore} className="mt-3 bg-secondary" color="bg-primary" />
           </CardContent>
         </Card>
 
         {/* Goal Progress */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Goal Progress</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Today's Progress</span>
             <CircleDot className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-display">4 / 6</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Weekly milestones completed</p>
-            <Progress value={66} className="mt-3 bg-secondary" color="bg-emerald-500" />
+            <div className="text-2xl font-bold font-display">
+              {completedTodayTasks} / {totalTodayTasks}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">Today's tasks completed</p>
+            <Progress value={todayProgress} className="mt-3 bg-secondary" color="bg-emerald-500" />
           </CardContent>
         </Card>
 
@@ -187,31 +208,38 @@ export const DashboardHome: React.FC = () => {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="space-y-3">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/40 hover:bg-secondary/20 transition-all cursor-pointer"
-                    onClick={() => toggleTask(task.id)}
-                  >
-                    <div className="flex items-center gap-3">
+                {todaysTasks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">No tasks scheduled for today.</p>
+                ) : (
+                  todaysTasks.map((task) => {
+                    const isCompleted = task.status === 'completed'
+                    return (
                       <div
-                        className={`h-5 w-5 rounded border flex items-center justify-center transition-colors ${
-                          task.completed
-                            ? 'bg-primary border-primary text-primary-foreground'
-                            : 'border-border'
-                        }`}
+                        key={task.id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/40 hover:bg-secondary/20 transition-all cursor-pointer"
+                        onClick={() => toggleTask(task.id)}
                       >
-                        {task.completed && '✓'}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`h-5 w-5 rounded border flex items-center justify-center transition-colors ${
+                              isCompleted
+                                ? 'bg-primary border-primary text-primary-foreground'
+                                : 'border-border'
+                            }`}
+                          >
+                            {isCompleted && '✓'}
+                          </div>
+                          <span className={`text-sm font-medium ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                            {task.title}
+                          </span>
+                        </div>
+                        <Badge variant={task.priority === 'urgent' || task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'warning' : 'secondary'}>
+                          {task.priority}
+                        </Badge>
                       </div>
-                      <span className={`text-sm font-medium ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                        {task.title}
-                      </span>
-                    </div>
-                    <Badge variant={task.urgency === 'high' ? 'destructive' : task.urgency === 'medium' ? 'warning' : 'secondary'}>
-                      {task.urgency}
-                    </Badge>
-                  </div>
-                ))}
+                    )
+                  })
+                )}
               </div>
             </CardContent>
           </Card>

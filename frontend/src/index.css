@@ -82,3 +82,26 @@
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
+
+/* Custom Scrollbar stylings for elegant overflow controls */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, hsl(var(--border)) 80%, transparent);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* Premium glassmorphic surface utility class */
+.glass-card {
+  background: color-mix(in srgb, hsl(var(--card)) 70%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 50%, transparent);
+}

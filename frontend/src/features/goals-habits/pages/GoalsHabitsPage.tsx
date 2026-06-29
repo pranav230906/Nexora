@@ -83,7 +83,7 @@ export const GoalsHabitsPage: React.FC = () => {
         description: goalDesc,
         targetDate: goalDate || new Date().toISOString().split('T')[0],
         isCompleted: false,
-        milestones: milestonesList
+        milestones: milestonesList as any
       })
       addToast({
         type: 'success',

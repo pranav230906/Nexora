@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { useToastStore } from '@/store/useToastStore'
 import { useGamificationStore } from '@/store/useGamificationStore'
+import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/utils/cn'
 
 export const GamificationPage: React.FC = () => {
@@ -283,7 +284,7 @@ export const GamificationPage: React.FC = () => {
                 <p className="text-xs text-muted-foreground py-6 text-center">Leaderboard is empty.</p>
               ) : (
                 leaderboard.map((user) => {
-                  const isCurrentUser = profile && user.email === profile.email
+                  const isCurrentUser = user.email === useAppStore.getState().user?.email
 
                   return (
                     <div

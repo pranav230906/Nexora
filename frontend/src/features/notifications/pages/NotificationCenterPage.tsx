@@ -57,9 +57,9 @@ export const NotificationCenterPage: React.FC = () => {
     })
   }
 
-  const handleTogglePreference = async (key: keyof typeof preferences) => {
+  const handleTogglePreference = async (key: any) => {
     if (!preferences) return
-    const updatedVal = !preferences[key]
+    const updatedVal = !preferences[key as keyof typeof preferences]
     await updatePreferences({ [key]: updatedVal })
     addToast({
       type: 'success',

@@ -30,10 +30,19 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'avatar', 'timezone', 'is_email_verified')
+        fields = ('id', 'username', 'email', 'avatar', 'timezone', 'is_email_verified', 'name')
         read_only_fields = ('id', 'email', 'is_email_verified')
+
+    def get_name(self, obj):
+        if obj.first_name:
+            if obj.last_name:
+                return f"{obj.first_name} {obj.last_name}"
+            return obj.first_name
+        return obj.username
 
 
 class ForgotPasswordSerializer(serializers.Serializer):

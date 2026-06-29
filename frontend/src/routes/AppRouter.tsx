@@ -105,6 +105,7 @@ const SettingsView = () => {
   )
 }
 
+
 const RootRoute = () => {
   const token = localStorage.getItem('auth_token')
   return token ? <Navigate to="/dashboard" replace /> : <LandingPage />

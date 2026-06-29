@@ -8,6 +8,7 @@ from .views import (
     VerifyEmailView,
     LogoutView,
     GoogleLoginView,
+    GoogleCallbackView,
     SendOTPView,
     VerifyOTPView
 )
@@ -35,4 +36,5 @@ urlpatterns = [
     
     # Google OAuth
     path('google/', GoogleLoginView.as_view(), name='google_login'),
+    path('google/callback/', GoogleCallbackView.as_view(), name='google_callback'),
 ]

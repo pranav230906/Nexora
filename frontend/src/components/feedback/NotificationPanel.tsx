@@ -75,11 +75,11 @@ export const NotificationPanel: React.FC = () => {
       {/* Trigger Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        className="relative h-9 w-9 flex items-center justify-center rounded-xl border border-border/85 bg-background/50 hover:bg-secondary text-foreground hover:text-foreground transition-all duration-200 cursor-pointer shadow-sm"
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-4.5 w-4.5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 animate-ping" />
+          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 animate-ping" />
         )}
       </button>
 
@@ -91,7 +91,7 @@ export const NotificationPanel: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl backdrop-blur-md z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-80 bg-[#09090b] border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
           >
             {/* Header */}
             <div className="p-3 border-b border-border bg-secondary/30 flex items-center justify-between">

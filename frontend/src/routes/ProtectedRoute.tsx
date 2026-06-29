@@ -10,8 +10,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation()
 
   if (!token) {
-    // Redirect to login page and remember the source path for redirecting back
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/" state={{ from: location }} replace />
   }
 
   return children

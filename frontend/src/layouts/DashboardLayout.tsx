@@ -28,10 +28,11 @@ import { QuickActions } from '@/components/ui/QuickActions'
 import { FloatingAiButton } from '@/components/ui/FloatingAiButton'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { cn } from '@/utils/cn'
+import apiClient from '@/services/apiClient'
 
 export const DashboardLayout: React.FC = () => {
   const { theme, setTheme } = useTheme()
-  const { user, logout } = useAppStore()
+  const { user, setUser, logout } = useAppStore()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -39,26 +40,39 @@ export const DashboardLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
+  React.useEffect(() => {
+    if (!user && localStorage.getItem('auth_token')) {
+      apiClient.get('/auth/profile/')
+        .then((response) => {
+          setUser(response.data)
+        })
+        .catch((err) => {
+          console.error("Failed to load user profile:", err)
+          logout()
+        })
+    }
+  }, [user, setUser, logout])
+
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
   const navItems = [
-    { label: 'Dashboard', path: '/', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { label: 'Tasks', path: '/tasks', icon: <CheckSquare className="h-4 w-4" /> },
-    { label: 'AI Planner', path: '/planner', icon: <Brain className="h-4 w-4" /> },
-    { label: 'Calendar', path: '/calendar', icon: <Calendar className="h-4 w-4" /> },
-    { label: 'Goals & Habits', path: '/goals', icon: <Target className="h-4 w-4" /> },
-    { label: 'Gamification', path: '/gamification', icon: <Trophy className="h-4 w-4" /> },
-    { label: 'Analytics', path: '/analytics', icon: <BarChart3 className="h-4 w-4" /> },
-    { label: 'AI Chat', path: '/chat', icon: <MessageSquare className="h-4 w-4" /> },
-    { label: 'Notifications', path: '/notifications', icon: <Bell className="h-4 w-4" /> },
-    { label: 'Settings', path: '/settings', icon: <Settings className="h-4 w-4" /> },
+    { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+    { label: 'Tasks', path: '/dashboard/tasks', icon: <CheckSquare className="h-4 w-4" /> },
+    { label: 'AI Planner', path: '/dashboard/planner', icon: <Brain className="h-4 w-4" /> },
+    { label: 'Calendar', path: '/dashboard/calendar', icon: <Calendar className="h-4 w-4" /> },
+    { label: 'Goals & Habits', path: '/dashboard/goals', icon: <Target className="h-4 w-4" /> },
+    { label: 'Gamification', path: '/dashboard/gamification', icon: <Trophy className="h-4 w-4" /> },
+    { label: 'Analytics', path: '/dashboard/analytics', icon: <BarChart3 className="h-4 w-4" /> },
+    { label: 'AI Chat', path: '/dashboard/chat', icon: <MessageSquare className="h-4 w-4" /> },
+    { label: 'Notifications', path: '/dashboard/notifications', icon: <Bell className="h-4 w-4" /> },
+    { label: 'Settings', path: '/dashboard/settings', icon: <Settings className="h-4 w-4" /> },
   ]
 
-  const userEmail = user?.email || 'admin@admin.com'
-  const userName = user?.name || 'Admin User'
+  const userEmail = user?.email || ''
+  const userName = user?.name || user?.username || ''
 
   const profileDropdownItems = [
     { label: 'View Profile', onClick: () => navigate('/settings') },
@@ -102,7 +116,7 @@ export const DashboardLayout: React.FC = () => {
           {/* Sidebar Brand Header */}
           <div className="h-12 flex items-center gap-3 border-b border-border/60 pb-3">
             <span className="h-7 w-7 rounded bg-primary flex items-center justify-center text-primary-foreground text-xs font-black shadow">
-              L
+              N
             </span>
             <span
               className={cn(
@@ -258,8 +272,10 @@ export const DashboardLayout: React.FC = () => {
         </header>
 
         {/* Content Outlet with smooth animations */}
-        <main className="flex-1 overflow-y-auto p-6 relative">
-          <Outlet />
+        <main className="flex-grow overflow-y-auto px-6 py-6 md:px-12 md:py-10 lg:px-20 lg:py-16 relative">
+          <div className="max-w-7xl mx-auto w-full">
+            <Outlet />
+          </div>
         </main>
       </div>
 

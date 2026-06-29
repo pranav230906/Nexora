@@ -62,26 +62,48 @@ export const LoginPage: React.FC = () => {
   }
 
 
-  const handleGoogleLogin = async () => {
-    setLoading(true)
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      localStorage.setItem('auth_token', 'mock_google_token')
-      setUser({ id: '2', name: 'Google User', email: 'user@gmail.com' })
-      addToast({
-        type: 'success',
-        title: 'Signed in with Google',
-        message: 'Logged in successfully.',
-      })
-      navigate('/')
-    } catch (err) {
-      addToast({
-        type: 'error',
-        message: 'Google Sign-In failed.',
-      })
-    } finally {
-      setLoading(false)
+  React.useEffect(() => {
+    const hash = window.location.hash
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1))
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      if (accessToken && refreshToken) {
+        window.location.hash = ''
+        localStorage.setItem('auth_token', accessToken)
+        localStorage.setItem('refresh_token', refreshToken)
+        
+        setLoading(true)
+        apiClient.get('/auth/profile/')
+          .then((profileResponse) => {
+            setUser(profileResponse.data)
+            addToast({
+              type: 'success',
+              title: 'Signed in with Google',
+              message: 'Logged in successfully.',
+            })
+            navigate('/')
+          })
+          .catch((err) => {
+            console.error('Failed to retrieve user profile:', err)
+            addToast({
+              type: 'error',
+              title: 'Google Sign-In Failed',
+              message: 'Could not fetch profile details.',
+            })
+          })
+          .finally(() => {
+            setLoading(false)
+          })
+      }
     }
+  }, [navigate, setUser, setLoading, addToast])
+
+  const handleGoogleLogin = () => {
+    const clientId = '1023743274517-n5q4hviq6h0qdhh1nf3l7i1tmiv9h7tb.apps.googleusercontent.com'
+    const redirectUri = 'http://localhost:8000/api/v1/auth/google/callback'
+    const scope = 'openid profile email'
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`
   }
 
   return (
@@ -154,7 +176,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <Checkbox label="Remember Me" {...register('rememberMe')} />
+          <Checkbox label="Remember Me" {...(register('rememberMe') as any)} />
         </div>
 
         <Button type="submit" className="w-full" isLoading={isLoading}>

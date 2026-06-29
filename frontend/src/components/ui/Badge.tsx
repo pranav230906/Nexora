@@ -16,12 +16,12 @@ export const Badge: React.FC<BadgeProps> = ({
     'inline-flex items-center rounded-full font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
 
   const variants = {
-    primary: 'bg-primary text-primary-foreground border-transparent',
-    secondary: 'bg-secondary text-secondary-foreground border-transparent',
+    primary: 'bg-primary/10 text-foreground border border-primary/20',
+    secondary: 'bg-secondary text-secondary-foreground border border-border/50',
     success: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 border',
     warning: 'bg-amber-500/10 text-amber-500 border-amber-500/20 border',
     destructive: 'bg-red-500/10 text-red-500 border-red-500/20 border',
-    outline: 'border border-border text-foreground bg-transparent',
+    outline: 'border border-border/60 text-muted-foreground bg-transparent',
   }
 
   const sizes = {

@@ -24,7 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         'relative border-r border-border bg-card flex flex-col justify-between h-full group z-20',
         className,
       )}
-      {...props}
+      {...(props as any)}
     >
       {/* Collapse Trigger Button */}
       <button

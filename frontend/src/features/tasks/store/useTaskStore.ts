@@ -152,7 +152,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         description: task.description,
         status: mapStatusToBackend(task.status),
         priority: mapPriorityToBackend(task.priority),
-        due_date: task.dueDate ? `${task.dueDate}T12:00:00Z` : null,
+        due_date: task.dueDate 
+          ? (task.dueDate.includes('T') ? `${task.dueDate}:00Z` : `${task.dueDate}T12:00:00Z`)
+          : null,
         estimated_time: task.estimatedTime || 0,
         tag_ids: tagIds,
         checklist_items: []
@@ -177,7 +179,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       if (updatedFields.description !== undefined) payload.description = updatedFields.description
       if (updatedFields.status !== undefined) payload.status = mapStatusToBackend(updatedFields.status)
       if (updatedFields.priority !== undefined) payload.priority = mapPriorityToBackend(updatedFields.priority)
-      if (updatedFields.dueDate !== undefined) payload.due_date = updatedFields.dueDate ? `${updatedFields.dueDate}T12:00:00Z` : null
+      if (updatedFields.dueDate !== undefined) {
+        payload.due_date = updatedFields.dueDate
+          ? (updatedFields.dueDate.includes('T') ? `${updatedFields.dueDate}:00Z` : `${updatedFields.dueDate}T12:00:00Z`)
+          : null
+      }
       if (updatedFields.estimatedTime !== undefined) payload.estimated_time = updatedFields.estimatedTime
       if (updatedFields.subtasks !== undefined) {
         payload.checklist_items = updatedFields.subtasks.map((s) => ({

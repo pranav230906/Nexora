@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.google_calendar',
     'apps.ai_assistant',
     'apps.ai_chatbot',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
@@ -197,3 +198,28 @@ LOGGING = {
 
 # Custom Authentication User Model
 AUTH_USER_MODEL = 'authentication.CustomUser'
+
+# Email Config
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='webmaster@localhost')
+
+# Force redis-py to default to protocol 2 (RESP2) globally to support older Redis versions (e.g. on Windows)
+try:
+    import redis.connection
+    original_init = redis.connection.Connection.__init__
+    def patched_init(self, *args, **kwargs):
+        if 'protocol' not in kwargs or kwargs['protocol'] is None:
+            kwargs['protocol'] = 2
+        # Disable health check and maintenance notifications when protocol=2 to avoid RESP3 check errors
+        if kwargs.get('protocol') == 2:
+            kwargs['health_check_interval'] = 0
+            kwargs['maint_notifications_config'] = None
+        original_init(self, *args, **kwargs)
+    redis.connection.Connection.__init__ = patched_init
+except Exception:
+    pass

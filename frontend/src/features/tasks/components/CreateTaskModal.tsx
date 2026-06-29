@@ -69,7 +69,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
       description: data.description,
       status: data.status,
       priority: data.priority,
-      dueDate: data.dueDate || new Date().toISOString().split('T')[0],
+      dueDate: data.dueDate || new Date().toISOString(),
       labels: formattedLabels,
       estimatedTime: Number(data.estimatedTime) || 30,
     }
@@ -159,8 +159,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
 
         <div className="grid grid-cols-2 gap-4">
           <InputField
-            label="Due Date"
-            type="date"
+            label="Due Date & Time"
+            type="datetime-local"
             {...register('dueDate')}
           />
 

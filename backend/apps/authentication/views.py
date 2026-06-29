@@ -4,6 +4,8 @@ from rest_framework import status, views, permissions, generics
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.core.mail import send_mail
+from django.conf import settings
 from drf_spectacular.utils import extend_schema
 
 from .serializers import (
@@ -43,11 +45,17 @@ class RegisterView(generics.CreateAPIView):
         code = f"{random.randint(100000, 999999)}"
         OTPVerification.objects.create(user=user, code=code, purpose='signup')
         
-        # Print mock email OTP to stdout console
-        print(f"--- MOCK OTP REGISTER EMAIL SENT ---")
-        print(f"To: {user.email}")
-        print(f"Code: {code}")
-        print(f"-------------------------------------")
+        # Send actual email OTP
+        try:
+            send_mail(
+                subject="Your Life Saver Verification Code",
+                message=f"Hello,\n\nYour 6-digit verification code is: {code}\n\nThis code will expire shortly.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error sending email: {e}")
 
         return Response({
             'user': UserProfileSerializer(user).data,
@@ -200,12 +208,17 @@ class SendOTPView(views.APIView):
         OTPVerification.objects.filter(user=user, purpose=purpose).delete() # Clean old OTPs
         OTPVerification.objects.create(user=user, code=code, purpose=purpose)
 
-        # Print mock email OTP to stdout console
-        print(f"--- MOCK OTP EMAIL SENT ---")
-        print(f"To: {email}")
-        print(f"Code: {code}")
-        print(f"Purpose: {purpose}")
-        print(f"----------------------------")
+        # Send actual email OTP
+        try:
+            send_mail(
+                subject="Your Life Saver Verification Code",
+                message=f"Hello,\n\nYour 6-digit verification code is: {code}\n\nThis code will expire shortly.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error sending email: {e}")
 
         return Response({
             "message": "OTP verification code sent (Stub).",

@@ -5,6 +5,7 @@ class ChatSession(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_sessions')
     title = models.CharField(max_length=255, default='New Chat')
     summary = models.TextField(blank=True, null=True, help_text="Compressed historical summary for long-term memory")
+    is_archived = models.BooleanField(default=False, help_text="Whether the session is archived")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -20,6 +21,8 @@ class ChatMessage(models.Model):
     session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='messages')
     sender = models.CharField(max_length=10, choices=Sender.choices)
     content = models.TextField()
+    tool_calls = models.JSONField(blank=True, null=True, help_text="Tool call metadata (which tools were invoked)")
+    token_count = models.PositiveIntegerField(default=0, help_text="Estimated token count for this message")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

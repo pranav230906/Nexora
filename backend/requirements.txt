@@ -18,3 +18,5 @@ google-auth-httplib2>=0.2.0
 google-auth-oauthlib>=1.2.0
 gunicorn>=21.2.0
 uvicorn[standard]>=0.27.0
+tiktoken>=0.5.0
+numpy>=1.24.0

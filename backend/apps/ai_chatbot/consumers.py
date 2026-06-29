@@ -1,22 +1,25 @@
+"""
+WebSocket consumer for real-time AI Chat streaming.
+Refactored to use the new ChatService orchestrator.
+"""
 import json
-import os
-import openai
 import asyncio
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 
 from .models import ChatSession, ChatMessage
-from apps.ai_assistant.models import AITokenLog
+from services.ai_chat.chat_service import ChatService
+from services.ai_chat import memory, tool_router, token_usage, vector_store
 
 User = get_user_model()
+
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         self.session_id = self.scope['url_route']['kwargs']['session_id']
-        
+
         # Extract JWT access token from query parameters
         query_string = self.scope.get('query_string', b'').decode('utf-8')
         params = dict(x.split('=') for x in query_string.split('&') if '=' in x)
@@ -31,13 +34,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             access_token = AccessToken(token)
             user_id = access_token['user_id']
             self.user = await self.get_user(user_id)
-            
+
             # Verify if user owns the chat session
             session_valid = await self.verify_session_owner(self.session_id, self.user)
             if not session_valid:
                 await self.close(code=4003)
                 return
-            
+
             await self.accept()
 
         except Exception as e:
@@ -52,55 +55,94 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if not message_text:
             return
 
+        # Validate message length
+        if len(message_text) > 4000:
+            message_text = message_text[:4000]
+
         # 1. Save User Message in database
         await self.save_message(self.session_id, ChatMessage.Sender.USER, message_text)
 
-        # 2. Fetch context memory
+        # 2. Detect and execute tools
+        tool_names = await asyncio.get_event_loop().run_in_executor(
+            None, tool_router.detect_tools_needed, message_text
+        )
+        tool_results = {}
+        tool_results_str = ""
+        if tool_names:
+            tool_results = await asyncio.get_event_loop().run_in_executor(
+                None, tool_router.execute_tools, tool_names, self.user
+            )
+            tool_results_str = tool_router.format_tool_results(tool_results)
+            await self.send_json({
+                "type": "tool_call",
+                "tools": list(tool_results.keys()),
+            })
+
+        # 3. Fetch context memory
         history = await self.get_conversation_history(self.session_id)
         summary = await self.get_session_summary(self.session_id)
 
-        # 3. Stream OpenAI completion
-        await self.stream_ai_response(message_text, history, summary)
+        # 4. Stream AI response
+        await self.stream_ai_response(message_text, history, summary, tool_results_str)
 
-        # 4. Check for auto-summarization triggers (Long-term memory optimization)
-        await self.trigger_auto_summarization(self.session_id)
+        # 5. Auto-summarization
+        await asyncio.get_event_loop().run_in_executor(
+            None, memory.compress_and_summarize, int(self.session_id)
+        )
 
-    async def stream_ai_response(self, user_msg, history, summary):
+        # 6. Auto-title
+        await self.auto_title_session(self.session_id, message_text)
+
+    async def stream_ai_response(self, user_msg, history, summary, tool_context=""):
+        import os
+        import openai
+
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
-            # Fallback if OpenAI key is not configured
             fallback = "[AI Chatbot is in offline demo mode. Setup your OpenAI API key to start conversations.]"
             await self.send_json({"type": "chat_chunk", "chunk": fallback})
             await self.send_json({"type": "chat_done"})
             await self.save_message(self.session_id, ChatMessage.Sender.AI, fallback)
             return
 
-        client = openai.OpenAI(api_key=api_key)
-        
-        # Build prompt messages
-        system_prompt = "You are a helpful and energetic personal developer assistant. Respond in clear Markdown."
+        base_url = os.environ.get("OPENAI_BASE_URL")
+        model = os.environ.get("AI_MODEL", "gpt-4o-mini")
+
+        client_kwargs = {'api_key': api_key}
+        if base_url:
+            client_kwargs['base_url'] = base_url
+        client = openai.OpenAI(**client_kwargs)
+
+        # Build prompt
+        from services.ai_chat import prompts as chat_prompts
+
+        system_prompt = chat_prompts.CHAT_SYSTEM_PROMPT
         if summary:
-            system_prompt += f"\n\nHere is a summary of the historical conversation context so far:\n{summary}"
+            system_prompt += f"\n\nPrevious conversation summary:\n{summary}"
+        if tool_context:
+            system_prompt += "\n\n" + chat_prompts.TOOL_RESULTS_TEMPLATE.format(
+                tool_results=tool_context
+            )
 
         messages = [{"role": "system", "content": system_prompt}]
         for msg in history:
             role = "user" if msg['sender'] == ChatMessage.Sender.USER else "assistant"
             messages.append({"role": role, "content": msg['content']})
 
-        # Add current user message
-        messages.append({"role": "user", "content": user_msg})
+        # Wrap user message for injection protection
+        wrapped = chat_prompts.USER_MESSAGE_WRAPPER.format(message=user_msg)
+        messages.append({"role": "user", "content": wrapped})
 
         full_response = ""
         try:
-            # Execute chat completion call asynchronously via executor
             loop = asyncio.get_event_loop()
             response_stream = await loop.run_in_executor(
                 None,
                 lambda: client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model=model,
                     messages=messages,
                     stream=True,
-                    temperature=0.7
+                    temperature=0.7,
                 )
             )
 
@@ -109,18 +151,33 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 content = getattr(delta, 'content', '') or ''
                 if content:
                     full_response += content
-                    # Send token chunk directly to client
                     await self.send_json({"type": "chat_chunk", "chunk": content})
 
             await self.send_json({"type": "chat_done"})
 
-            # Log estimated tokens to AITokenLog
-            input_est = len(str(messages)) // 4
-            output_est = len(full_response) // 4
-            await self.log_ai_cost(self.user, input_est, output_est)
+            # Log token usage
+            input_est = token_usage.estimate_tokens(str(messages))
+            output_est = token_usage.estimate_tokens(full_response)
+            await loop.run_in_executor(
+                None,
+                token_usage.log_chat_usage,
+                self.user, input_est, output_est, model
+            )
 
-            # Save full AI response message to database
+            # Save full AI response
             await self.save_message(self.session_id, ChatMessage.Sender.AI, full_response)
+
+            # Index in vector store
+            try:
+                store = vector_store.get_user_store(self.user.id)
+                await loop.run_in_executor(
+                    None,
+                    store.add_message,
+                    full_response,
+                    {'session_id': self.session_id, 'role': 'assistant'}
+                )
+            except Exception:
+                pass
 
         except Exception as e:
             print(f"Failed to stream response: {e}")
@@ -129,7 +186,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "chat_done"})
             await self.save_message(self.session_id, ChatMessage.Sender.AI, full_response + error_msg)
 
-    # Database operations helper wrappers
+    # Database operations
     @database_sync_to_async
     def get_user(self, user_id):
         return User.objects.get(id=user_id)
@@ -141,8 +198,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def save_message(self, session_id, sender, content):
         session = ChatSession.objects.get(id=session_id)
-        ChatMessage.objects.create(session=session, sender=sender, content=content)
-        # Touch session to update updated_at timestamp
+        ChatMessage.objects.create(
+            session=session,
+            sender=sender,
+            content=content,
+            token_count=token_usage.estimate_tokens(content),
+        )
         session.save()
 
     @database_sync_to_async
@@ -155,42 +216,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         return ChatSession.objects.get(id=session_id).summary
 
     @database_sync_to_async
-    def log_ai_cost(self, user, input_tokens, output_tokens):
-        # Pricing for gpt-4o-mini
-        cost = (input_tokens * 0.00000015) + (output_tokens * 0.00000060)
-        AITokenLog.objects.create(
-            user=user,
-            agent_name="ChatbotConsumer",
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cost=cost
-        )
-
-    @database_sync_to_async
-    def trigger_auto_summarization(self, session_id):
-        """
-        Long-term memory optimization: if a session contains more than 15 messages,
-        we summarize the oldest 10 messages, update the summary block, and delete them.
-        """
+    def auto_title_session(self, session_id, message):
         session = ChatSession.objects.get(id=session_id)
-        messages_count = session.messages.count()
-        if messages_count <= 15:
-            return
-
-        # Fetch oldest 10 messages
-        old_messages = session.messages.order_by('created_at')[:10]
-        old_texts = [f"{msg.sender}: {msg.content}" for msg in old_messages]
-        
-        # Simple local summarization fallback
-        summary_text = f"Summary of early thread: {', '.join(old_texts)[:300]}..."
-        
-        # Update summary
-        if session.summary:
-            session.summary = f"{session.summary}\n\n{summary_text}"
-        else:
-            session.summary = summary_text
-        session.save()
-
-        # Delete summarized records
-        for msg in old_messages:
-            msg.delete()
+        if session.title == 'New Chat' and message:
+            session.title = message[:50] + ('...' if len(message) > 50 else '')
+            session.save(update_fields=['title'])

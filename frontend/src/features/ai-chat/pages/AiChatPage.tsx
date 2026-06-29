@@ -12,6 +12,7 @@ import {
   File,
   X,
   VolumeX,
+  Volume2,
   Loader2,
   Trash2,
   Archive,
@@ -63,6 +64,10 @@ export const AiChatPage: React.FC = () => {
   // Voice/Mic state
   const [micActive, setMicActive] = useState(false)
 
+  // Speech Text-to-Speech state
+  const [activeSpeechId, setActiveSpeechId] = useState<string | null>(null)
+  const synthRef = useRef<SpeechSynthesis | null>(typeof window !== 'undefined' ? window.speechSynthesis : null)
+
   // Attachment state
   const [stagedAttachment, setStagedAttachment] = useState<{ name: string; size: string } | null>(null)
 
@@ -71,6 +76,7 @@ export const AiChatPage: React.FC = () => {
   const [activeTools, setActiveTools] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   // Suggested Prompts
   const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
@@ -78,6 +84,18 @@ export const AiChatPage: React.FC = () => {
     'Draft a team email asking for feedback on Component UX.',
     'Analyze my workload and suggest a Pomodoro schedule.',
   ])
+
+  // Clean up recognition and speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort()
+      }
+      if (synthRef.current) {
+        synthRef.current.cancel()
+      }
+    }
+  }, [])
 
   // Scroll to bottom helper
   const scrollToBottom = () => {
@@ -256,30 +274,80 @@ export const AiChatPage: React.FC = () => {
     setStagedAttachment(null)
   }
 
-  // Trigger Voice Input simulation
+  // Trigger Speech-to-Text SpeechRecognition
   const handleToggleMic = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      addToast({
+        type: 'warning',
+        title: 'Speech Recognition Unsupported',
+        message: 'Your browser does not support native speech recognition. Please use Google Chrome or Microsoft Edge.',
+      })
+      return
+    }
+
     if (micActive) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
       setMicActive(false)
       return
     }
 
-    setMicActive(true)
-    addToast({
-      type: 'info',
-      title: 'Voice Activated',
-      message: 'Listening... (Speak your request)',
-    })
+    try {
+      const recognition = new SpeechRecognition()
+      recognition.continuous = false
+      recognition.interimResults = false
+      recognition.lang = 'en-US'
 
-    // Simulate voice transcript injection
-    setTimeout(() => {
-      setPromptInput('Optimize my weekly schedule to prepare for pitch review.')
+      recognition.onstart = () => {
+        setMicActive(true)
+        addToast({
+          type: 'info',
+          title: 'Microphone Active',
+          message: 'Listening... Speak your request now.',
+        })
+      }
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        if (transcript) {
+          setPromptInput((prev) => (prev ? `${prev} ${transcript}` : transcript))
+          addToast({
+            type: 'success',
+            title: 'Speech Transcribed',
+            message: `"${transcript}" added to input.`,
+          })
+        }
+      }
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
+        let errorMsg = 'Could not capture speech.'
+        if (event.error === 'not-allowed') {
+          errorMsg = 'Microphone permission denied. Enable mic access in your browser settings.'
+        } else if (event.error === 'no-speech') {
+          errorMsg = 'No speech was detected. Please try again.'
+        }
+        addToast({
+          type: 'destructive',
+          title: 'Speech Error',
+          message: errorMsg,
+        })
+        setMicActive(false)
+      }
+
+      recognition.onend = () => {
+        setMicActive(false)
+      }
+
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch (err: any) {
+      console.error('Failed to start speech recognition:', err)
       setMicActive(false)
-      addToast({
-        type: 'success',
-        title: 'Voice Transcript Received',
-        message: 'Text generated from voice input.',
-      })
-    }, 3000)
+    }
   }
 
   // Copy code blocks helper
@@ -294,7 +362,50 @@ export const AiChatPage: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  // Parse markdown for bold, lists, and code blocks
+  // Copy complete assistant response helper
+  const handleCopyMessage = (messageText: string, msgId: string) => {
+    navigator.clipboard.writeText(messageText)
+    setCopiedId(msgId)
+    addToast({
+      type: 'info',
+      title: 'Response Copied',
+      message: 'Full response copied to clipboard.',
+    })
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  // Client-side text-to-speech speaker handler
+  const handleSpeak = (text: string, msgId: string) => {
+    if (!synthRef.current) return
+
+    if (activeSpeechId === msgId) {
+      synthRef.current.cancel()
+      setActiveSpeechId(null)
+      return
+    }
+
+    synthRef.current.cancel()
+
+    // Clean text by stripping markdown codes and tags
+    const cleanText = text
+      .replace(/```[\s\S]*?```/g, '') // remove code blocks
+      .replace(/`([^`]+)`/g, '$1')   // remove inline code blocks
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // remove bold formatting
+      .replace(/\*([^*]+)\*/g, '$1')    // remove italic formatting
+
+    const utterance = new SpeechSynthesisUtterance(cleanText)
+    utterance.onend = () => {
+      setActiveSpeechId(null)
+    }
+    utterance.onerror = () => {
+      setActiveSpeechId(null)
+    }
+
+    setActiveSpeechId(msgId)
+    synthRef.current.speak(utterance)
+  }
+
+  // Parse markdown for bold, lists, inline code, and code blocks
   const renderMessageContent = (text: string, msgId: string) => {
     // If it contains a code block
     if (text.includes('```')) {
@@ -308,7 +419,7 @@ export const AiChatPage: React.FC = () => {
           const blockId = `${msgId}-${idx}`
 
           return (
-            <div key={idx} className="my-4 rounded-xl overflow-hidden border border-border/80 bg-black/90 shadow-2xl text-emerald-400 font-mono text-xs text-left max-w-full">
+            <div key={idx} className="my-4 rounded-xl overflow-hidden border border-border/80 bg-black/90 shadow-2xl text-emerald-400 font-mono text-[11px] text-left max-w-full">
               <div className="flex justify-between items-center bg-white/5 px-4 py-2.5 border-b border-border/40 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 <span className="flex items-center gap-1.5"><Terminal className="h-3.5 w-3.5 text-primary" /> {language}</span>
                 <button
@@ -342,20 +453,34 @@ export const AiChatPage: React.FC = () => {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
 
+    // Headers
+    html = html.replace(/^### (.*?)$/gm, '<h4 class="text-xs font-bold text-foreground mt-3 mb-1.5">$1</h4>')
+    html = html.replace(/^## (.*?)$/gm, '<h3 class="text-sm font-bold text-foreground mt-4 mb-2">$1</h3>')
+    html = html.replace(/^# (.*?)$/gm, '<h2 class="text-base font-bold text-foreground mt-4 mb-2">$1</h2>')
+
+    // Blockquotes: lines starting with &gt;
+    html = html.replace(/^\s*&gt;\s+(.*?)$/gm, '<blockquote class="border-l-2 border-primary/50 pl-3 my-2 text-muted-foreground/80 italic bg-primary/5 py-1 pr-2 rounded-r">$1</blockquote>')
+
     // Bold: **text**
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-foreground">$1</strong>')
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
     
     // Italic: *text*
-    html = html.replace(/\*(.*?)\*/g, '<em class="italic text-muted-foreground">$1</em>')
+    html = html.replace(/\*(.*?)\*/g, '<em class="italic text-muted-foreground/90">$1</em>')
+
+    // Inline Code: `code`
+    html = html.replace(/`(.*?)`/g, '<code class="bg-primary/10 border border-primary/15 text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">$1</code>')
+
+    // Numbered lists: lines starting with number
+    html = html.replace(/^\s*(\d+)\.\s+(.*?)$/gm, '<li class="list-decimal ml-5 my-1 text-[11px] text-foreground/90 leading-relaxed">$2</li>')
 
     // Bullets starting with '-' or '*'
-    html = html.replace(/^\s*[-*]\s+(.*?)$/gm, '<li class="list-disc ml-5 my-1 text-xs text-foreground/90 leading-relaxed">$1</li>')
+    html = html.replace(/^\s*[-*]\s+(.*?)$/gm, '<li class="list-disc ml-5 my-1 text-[11px] text-foreground/90 leading-relaxed">$1</li>')
 
     // Replace newlines with breaks
     html = html.replace(/\n/g, '<br />')
 
-    // Clean extra spacing around list tags
-    html = html.replace(/<\/li><br \/>/g, '</li>')
+    // Clean extra spacing around tags
+    html = html.replace(/(<\/li>|<\/blockquote>|<\/h\d>)<br \/>/g, '$1')
 
     return html
   }
@@ -602,19 +727,39 @@ export const AiChatPage: React.FC = () => {
               <div key={msg.id} className={cn('flex items-start gap-3', msg.sender === 'user' ? 'justify-end' : 'justify-start')}>
                 {/* AI Avatar */}
                 {msg.sender === 'ai' && (
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 shadow-sm mt-0.5 animate-in zoom-in duration-200">
                     <Sparkles className="h-3.5 w-3.5 text-primary fill-primary" />
                   </div>
                 )}
 
                 <div
                   className={cn(
-                    'max-w-[78%] rounded-2xl px-4 py-3 text-xs leading-relaxed space-y-3 text-left transition-all duration-250',
+                    'max-w-[78%] rounded-2xl px-4.5 py-3 text-[13px] leading-relaxed space-y-3 text-left transition-all duration-250 relative group/msg shadow-sm',
                     msg.sender === 'user'
-                      ? 'bg-primary text-primary-foreground shadow-md font-medium rounded-tr-none'
-                      : 'bg-secondary/40 text-foreground border border-border/80 rounded-tl-none shadow-sm backdrop-blur-sm'
+                      ? 'bg-primary text-primary-foreground shadow-md font-medium rounded-tr-none border border-primary-foreground/5'
+                      : 'bg-secondary/35 text-foreground/95 border border-border/70 rounded-tl-none backdrop-blur-sm hover:border-primary/20 hover:shadow-md'
                   )}
                 >
+                  {/* Message hover toolbar */}
+                  {msg.sender === 'ai' && !msg.isStreaming && (
+                    <div className="absolute right-3 -bottom-7 opacity-0 group-hover/msg:opacity-100 flex items-center gap-1 bg-card border border-border rounded-lg p-0.5 shadow-md transition-all duration-200 z-10">
+                      <button
+                        onClick={() => handleCopyMessage(msg.text, msg.id)}
+                        className="p-1 hover:bg-secondary text-muted-foreground hover:text-foreground rounded transition-colors"
+                        title="Copy Response"
+                      >
+                        {copiedId === msg.id ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                      <button
+                        onClick={() => handleSpeak(msg.text, msg.id)}
+                        className="p-1 hover:bg-secondary text-muted-foreground hover:text-foreground rounded transition-colors"
+                        title={activeSpeechId === msg.id ? 'Stop Reading' : 'Read Aloud'}
+                      >
+                        {activeSpeechId === msg.id ? <VolumeX className="h-3 w-3 text-primary animate-pulse" /> : <Volume2 className="h-3 w-3" />}
+                      </button>
+                    </div>
+                  )}
+
                   {/* Tool execution notice */}
                   {msg.toolCalls && msg.toolCalls.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-border/30 text-[9px] font-bold text-muted-foreground uppercase tracking-wide">
@@ -628,7 +773,7 @@ export const AiChatPage: React.FC = () => {
                   )}
 
                   {/* Text render */}
-                  <div className="text-xs space-y-1">
+                  <div className="text-[13px] space-y-1">
                     {renderMessageContent(msg.text, msg.id)}
                   </div>
 
@@ -646,7 +791,7 @@ export const AiChatPage: React.FC = () => {
 
                 {/* User Avatar */}
                 {msg.sender === 'user' && (
-                  <div className="h-7 w-7 rounded-lg bg-primary border border-primary-foreground/10 flex items-center justify-center shrink-0 shadow-sm mt-0.5 text-[10px] font-bold text-primary-foreground">
+                  <div className="h-7 w-7 rounded-lg bg-primary border border-primary-foreground/10 flex items-center justify-center shrink-0 shadow-sm mt-0.5 text-[10px] font-bold text-primary-foreground animate-in zoom-in duration-200">
                     U
                   </div>
                 )}
@@ -677,14 +822,14 @@ export const AiChatPage: React.FC = () => {
 
           {/* Premium Skeleton/Pulse Typing State */}
           {isThinking && activeTools.length === 0 && (
-            <div className="flex items-start gap-3 justify-start">
+            <div className="flex items-start gap-3 justify-start animate-pulse">
               <div className="h-7 w-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <Sparkles className="h-3.5 w-3.5 text-primary fill-primary animate-pulse" />
+                <Sparkles className="h-3.5 w-3.5 text-primary fill-primary" />
               </div>
               <div className="bg-secondary/40 text-foreground border border-border/80 rounded-2xl rounded-tl-none px-5 py-4 flex flex-col gap-2 shadow-sm min-w-[200px] max-w-[280px]">
-                <div className="h-2 w-3/4 bg-muted-foreground/15 rounded-full animate-pulse" />
-                <div className="h-2 w-full bg-muted-foreground/15 rounded-full animate-pulse [animation-delay:0.15s]" />
-                <div className="h-2 w-5/6 bg-muted-foreground/15 rounded-full animate-pulse [animation-delay:0.3s]" />
+                <div className="h-2 w-3/4 bg-muted-foreground/15 rounded-full" />
+                <div className="h-2 w-full bg-muted-foreground/15 rounded-full" />
+                <div className="h-2 w-5/6 bg-muted-foreground/15 rounded-full" />
               </div>
             </div>
           )}

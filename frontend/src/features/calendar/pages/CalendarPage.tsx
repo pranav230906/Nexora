@@ -7,11 +7,12 @@ import {
   RefreshCw,
   CheckCircle,
   Share2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Avatar } from '@/components/ui/Avatar'
 import { useToastStore } from '@/store/useToastStore'
 import { useGoogleCalendarStore } from '@/store/useGoogleCalendarStore'
 import { useTaskStore } from '@/features/tasks/store/useTaskStore'
@@ -28,13 +29,15 @@ export const CalendarPage: React.FC = () => {
     fetchMeetings,
     syncTasks,
     exchangeAuthCode,
-    disconnectCalendar
   } = useGoogleCalendarStore()
 
   const { tasks, fetchTasks } = useTaskStore()
 
   // Calendar Perspectives Tabs State
   const [activeTab, setActiveTab] = useState<'month' | 'week' | 'day' | 'agenda'>('month')
+  
+  // Date State for Navigation
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
 
   useEffect(() => {
     fetchTasks()
@@ -54,7 +57,6 @@ export const CalendarPage: React.FC = () => {
             title: 'Calendar Linked!',
             message: 'Successfully linked your Google Calendar.'
           })
-          // Clean up url parameters
           window.history.replaceState(null, '', window.location.pathname)
         } catch (err) {
           addToast({
@@ -70,14 +72,12 @@ export const CalendarPage: React.FC = () => {
 
   const handleSyncGoogle = async () => {
     if (!isConnected) {
-      // Redirect to Google Consent screen
       const client_id = "1023743274517-n5q4hviq6h0qdhh1nf3l7i1tmiv9h7tb.apps.googleusercontent.com"
       const redirect_uri = `${window.location.origin}/calendar`
       const scope = "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events"
       const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`
       window.location.href = url
     } else {
-      // Trigger a manual task synchronization
       await syncTasks()
       addToast({
         type: 'success',
@@ -98,20 +98,18 @@ export const CalendarPage: React.FC = () => {
       link?: string
     }> = []
 
-    // 1. Map backend tasks with due dates
     tasks.forEach((task) => {
       if (task.dueDate) {
         events.push({
           id: `t-${task.id}`,
           title: task.title,
-          date: task.dueDate,
-          time: 'Due Date',
+          date: task.dueDate.split('T')[0],
+          time: task.dueDate.includes('T') ? task.dueDate.split('T')[1].substring(0, 5) : 'Due Date',
           type: 'task'
         })
       }
     })
 
-    // 2. Map meetings from Google Calendar
     meetings.forEach((meet) => {
       if (meet.startTime) {
         const datePart = meet.startTime.split('T')[0]
@@ -137,34 +135,112 @@ export const CalendarPage: React.FC = () => {
 
   const getEventBg = (type: 'task' | 'meeting') => {
     if (type === 'meeting') {
-      return 'bg-blue-500/10 border-blue-500/20 text-blue-500'
+      return 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20'
     }
-    return 'bg-primary/5 border-primary/20 text-primary'
+    return 'bg-primary/5 border-primary/20 text-primary hover:bg-primary/10'
+  }
+
+  // Navigation Handlers
+  const handlePrev = () => {
+    if (activeTab === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+    } else if (activeTab === 'week') {
+      setCurrentDate(new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000))
+    } else {
+      setCurrentDate(new Date(currentDate.getTime() - 24 * 60 * 60 * 1000))
+    }
+  }
+
+  const handleNext = () => {
+    if (activeTab === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+    } else if (activeTab === 'week') {
+      setCurrentDate(new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000))
+    } else {
+      setCurrentDate(new Date(currentDate.getTime() + 24 * 60 * 60 * 1000))
+    }
+  }
+
+  const handleToday = () => {
+    setCurrentDate(new Date())
   }
 
   // View renderer: Month
   const renderMonthView = () => {
-    const days = Array.from({ length: 30 }, (_, i) => i + 1)
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+
+    const firstDayIndex = new Date(year, month, 1).getDay()
+    const startOffset = firstDayIndex === 0 ? 6 : firstDayIndex - 1
+    const totalDays = new Date(year, month + 1, 0).getDate()
+    const prevTotalDays = new Date(year, month, 0).getDate()
+
+    const cells: Array<{ day: number; dateStr: string; isCurrentMonth: boolean }> = []
+
+    // Previous month padding cells
+    for (let i = startOffset - 1; i >= 0; i--) {
+      const prevDay = prevTotalDays - i
+      const prevMonth = month === 0 ? 11 : month - 1
+      const prevYear = month === 0 ? year - 1 : year
+      cells.push({
+        day: prevDay,
+        dateStr: `${prevYear}-${(prevMonth + 1).toString().padStart(2, '0')}-${prevDay.toString().padStart(2, '0')}`,
+        isCurrentMonth: false,
+      })
+    }
+
+    // Current month cells
+    for (let i = 1; i <= totalDays; i++) {
+      cells.push({
+        day: i,
+        dateStr: `${year}-${(month + 1).toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`,
+        isCurrentMonth: true,
+      })
+    }
+
+    // Next month padding cells
+    let nextMonthDay = 1
+    while (cells.length < 42) {
+      const nextMonth = month === 11 ? 0 : month + 1
+      const nextYear = month === 11 ? year + 1 : year
+      cells.push({
+        day: nextMonthDay,
+        dateStr: `${nextYear}-${(nextMonth + 1).toString().padStart(2, '0')}-${nextMonthDay.toString().padStart(2, '0')}`,
+        isCurrentMonth: false,
+      })
+      nextMonthDay++
+    }
+
     return (
       <div className="grid grid-cols-7 gap-1.5 border border-border bg-card p-3 rounded-lg animate-in fade-in duration-200">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
           <div key={day} className="text-center font-bold text-xs py-1.5 text-muted-foreground uppercase">{day}</div>
         ))}
-        {days.map((day) => {
-          const dateStr = `2026-06-${day.toString().padStart(2, '0')}`
+        {cells.map(({ day, dateStr, isCurrentMonth }) => {
           const dayEvents = allEvents.filter((e) => e.date === dateStr)
+          const isToday = new Date().toISOString().split('T')[0] === dateStr
 
           return (
-            <div key={day} className="min-h-[100px] border border-border/40 bg-secondary/5 rounded p-2 flex flex-col justify-between">
-              <span className="text-xs font-bold text-muted-foreground">{day}</span>
-              <div className="space-y-1 mt-2">
+            <div
+              key={dateStr}
+              className={cn(
+                'min-h-[100px] border border-border/40 rounded p-2 flex flex-col justify-between transition-colors',
+                isCurrentMonth ? 'bg-secondary/5' : 'bg-secondary/1 opacity-40',
+                isToday && 'border-primary/60 bg-primary/5 ring-1 ring-primary/20'
+              )}
+            >
+              <span className={cn('text-xs font-bold', isToday ? 'text-primary' : 'text-muted-foreground')}>
+                {day}
+              </span>
+              <div className="space-y-1 mt-2 flex-grow overflow-y-auto max-h-[70px]">
                 {dayEvents.map((ev) => (
                   <div
                     key={ev.id}
                     className={cn(
-                      'text-[9px] font-bold p-1 rounded border truncate cursor-pointer leading-none',
+                      'text-[9px] font-bold p-1 rounded border truncate cursor-pointer leading-none text-left',
                       getEventBg(ev.type)
                     )}
+                    title={`${ev.title} (${ev.time})`}
                   >
                     {ev.title}
                   </div>
@@ -179,32 +255,46 @@ export const CalendarPage: React.FC = () => {
 
   // View renderer: Week
   const renderWeekView = () => {
-    const daysOfWeek = [
-      { label: 'Mon 25', date: '2026-06-25' },
-      { label: 'Tue 26', date: '2026-06-26' },
-      { label: 'Wed 27', date: '2026-06-27' },
-      { label: 'Thu 28', date: '2026-06-28' },
-      { label: 'Fri 29', date: '2026-06-29' },
-      { label: 'Sat 30', date: '2026-06-30' },
-    ]
+    // Find the Monday of the current selected week
+    const currentDay = currentDate.getDay()
+    const offsetToMonday = currentDay === 0 ? -6 : 1 - currentDay
+    const monday = new Date(currentDate.getTime() + offsetToMonday * 24 * 60 * 60 * 1000)
+
+    const daysOfWeek = Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(monday.getTime() + i * 24 * 60 * 60 * 1000)
+      return {
+        label: day.toLocaleDateString([], { weekday: 'short', day: 'numeric' }),
+        date: day.toISOString().split('T')[0]
+      }
+    })
 
     return (
-      <div className="grid grid-cols-6 gap-2 border border-border bg-card p-4 rounded-lg animate-in fade-in duration-200 overflow-x-auto min-w-[700px]">
+      <div className="grid grid-cols-7 gap-2 border border-border bg-card p-4 rounded-lg animate-in fade-in duration-200 overflow-x-auto min-w-[700px]">
         {daysOfWeek.map((day) => {
           const dayEvents = allEvents.filter((ev) => ev.date === day.date)
+          const isToday = new Date().toISOString().split('T')[0] === day.date
+
           return (
-            <div key={day.date} className="space-y-3 min-h-[400px] border-r border-border/40 last:border-0 pr-2">
-              <div className="text-center font-bold text-xs border-b border-border pb-2 text-muted-foreground uppercase">{day.label}</div>
+            <div
+              key={day.date}
+              className={cn(
+                'space-y-3 min-h-[400px] border-r border-border/40 last:border-0 pr-2',
+                isToday && 'bg-primary/5 rounded-lg border border-primary/20 p-1'
+              )}
+            >
+              <div className={cn('text-center font-bold text-xs border-b border-border pb-2 uppercase', isToday ? 'text-primary' : 'text-muted-foreground')}>
+                {day.label}
+              </div>
               <div className="space-y-2">
                 {dayEvents.map((ev) => (
                   <div
                     key={ev.id}
                     className={cn(
-                      'p-2.5 rounded-lg border text-xs font-semibold space-y-1.5 shadow-sm',
+                      'p-2.5 rounded-lg border text-xs font-semibold space-y-1.5 shadow-sm text-left',
                       getEventBg(ev.type)
                     )}
                   >
-                    <div className="truncate">{ev.title}</div>
+                    <div className="truncate font-bold">{ev.title}</div>
                     <span className="text-[10px] opacity-80 block">{ev.time}</span>
                   </div>
                 ))}
@@ -218,15 +308,17 @@ export const CalendarPage: React.FC = () => {
 
   // View renderer: Day
   const renderDayView = () => {
-    const todayStr = new Date().toISOString().split('T')[0]
-    const dayEvents = allEvents.filter((ev) => ev.date === todayStr)
+    const dateStr = currentDate.toISOString().split('T')[0]
+    const dayEvents = allEvents.filter((ev) => ev.date === dateStr)
 
     return (
       <div className="border border-border bg-card p-4 rounded-lg space-y-4 animate-in fade-in duration-200 max-w-2xl mx-auto">
-        <h3 className="font-display font-semibold text-sm border-b border-border pb-2 text-muted-foreground uppercase">Today</h3>
+        <h3 className="font-display font-semibold text-sm border-b border-border pb-2 text-muted-foreground uppercase text-left">
+          {currentDate.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        </h3>
         <div className="space-y-3">
           {dayEvents.length === 0 ? (
-            <div className="text-center py-10 text-xs text-muted-foreground">No events planned today.</div>
+            <div className="text-center py-10 text-xs text-muted-foreground">No events planned for this day.</div>
           ) : (
             dayEvents.map((ev) => (
               <div
@@ -261,29 +353,51 @@ export const CalendarPage: React.FC = () => {
   }
 
   // View renderer: Agenda
-  const renderAgendaView = () => (
-    <div className="border border-border bg-card p-4 rounded-lg divide-y divide-border/60 max-w-2xl mx-auto animate-in fade-in duration-200">
-      {allEvents.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-8 text-center">No upcoming schedules.</p>
-      ) : (
-        allEvents.map((ev) => (
-          <div key={ev.id} className="py-4 flex gap-4 items-start first:pt-0 last:pb-0">
-            <div className="w-24 text-xs font-bold text-muted-foreground">{ev.date}</div>
-            <div className="flex-grow space-y-2">
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-bold text-foreground">{ev.title}</h4>
-                <Badge variant={ev.type === 'meeting' ? 'primary' : 'outline'} className="text-[9px]">{ev.type}</Badge>
-              </div>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {ev.time}</span>
-                {ev.link && <span className="flex items-center gap-1 text-primary cursor-pointer" onClick={() => window.open(ev.link, '_blank')}><Video className="h-3.5 w-3.5" /> Join Meet</span>}
+  const renderAgendaView = () => {
+    // Sort upcoming events relative to current date
+    const targetDateStr = currentDate.toISOString().split('T')[0]
+    const upcomingEvents = allEvents.filter((ev) => ev.date >= targetDateStr).sort((a, b) => a.date.localeCompare(b.date))
+
+    return (
+      <div className="border border-border bg-card p-4 rounded-lg divide-y divide-border/60 max-w-2xl mx-auto animate-in fade-in duration-200">
+        {upcomingEvents.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-8 text-center">No upcoming schedules.</p>
+        ) : (
+          upcomingEvents.map((ev) => (
+            <div key={ev.id} className="py-4 flex gap-4 items-start first:pt-0 last:pb-0">
+              <div className="w-24 text-xs font-bold text-muted-foreground text-left">{ev.date}</div>
+              <div className="flex-grow space-y-2 text-left">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-foreground">{ev.title}</h4>
+                  <Badge variant={ev.type === 'meeting' ? 'primary' : 'outline'} className="text-[9px]">{ev.type}</Badge>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {ev.time}</span>
+                  {ev.link && <span className="flex items-center gap-1 text-primary cursor-pointer" onClick={() => window.open(ev.link, '_blank')}><Video className="h-3.5 w-3.5" /> Join Meet</span>}
+                </div>
               </div>
             </div>
-          </div>
-        ))
-      )}
-    </div>
-  )
+          ))
+        )}
+      </div>
+    )
+  }
+
+  // Helper title based on active tab
+  const getHeaderTitle = () => {
+    if (activeTab === 'month') {
+      return currentDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
+    }
+    if (activeTab === 'week') {
+      // Find the Monday of the current selected week
+      const currentDay = currentDate.getDay()
+      const offsetToMonday = currentDay === 0 ? -6 : 1 - currentDay
+      const monday = new Date(currentDate.getTime() + offsetToMonday * 24 * 60 * 60 * 1000)
+      const sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000)
+      return `${monday.toLocaleDateString([], { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`
+    }
+    return currentDate.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+  }
 
   return (
     <div className="space-y-6">
@@ -327,18 +441,49 @@ export const CalendarPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Calendar Perspective Panels & tabs */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="flex gap-1 bg-secondary p-1 rounded-lg w-fit">
-            {(['month', 'week', 'day', 'agenda'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-xs font-semibold px-4 py-1.5 rounded-md transition-colors cursor-pointer capitalize ${
-                  activeTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="flex flex-wrap justify-between items-center gap-4">
+            <div className="flex gap-1 bg-secondary p-1 rounded-lg w-fit">
+              {(['month', 'week', 'day', 'agenda'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab)
+                  }}
+                  className={`text-xs font-semibold px-4 py-1.5 rounded-md transition-colors cursor-pointer capitalize ${
+                    activeTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-foreground mr-2">{getHeaderTitle()}</span>
+              <div className="flex bg-secondary p-1 rounded-lg">
+                <button
+                  onClick={handlePrev}
+                  className="p-1 hover:bg-card hover:text-foreground rounded text-muted-foreground transition-all cursor-pointer"
+                  title="Previous"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={handleToday}
+                  className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider hover:bg-card hover:text-foreground rounded text-muted-foreground transition-all cursor-pointer"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="p-1 hover:bg-card hover:text-foreground rounded text-muted-foreground transition-all cursor-pointer"
+                  title="Next"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="min-h-[400px]">

@@ -13,4 +13,5 @@ urlpatterns = [
 
     # API Versioning endpoints
     path('api/v1/auth/', include('apps.authentication.urls', namespace='auth')),
+    path('api/v1/', include('apps.tasks.urls', namespace='tasks')),
 ]

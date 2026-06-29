@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   List as ListIcon,
   Kanban as KanbanIcon,
@@ -34,7 +34,12 @@ export const TasksPage: React.FC = () => {
     setSortBy,
     deleteTask,
     updateTask,
+    fetchTasks,
   } = useTaskStore()
+
+  useEffect(() => {
+    fetchTasks()
+  }, [fetchTasks])
 
   const addToast = useToastStore((state) => state.addToast)
 

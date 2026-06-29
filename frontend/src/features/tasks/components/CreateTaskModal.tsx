@@ -59,7 +59,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
     }
   }, [taskToEdit, reset, isOpen])
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     const formattedLabels = data.labelsString
       ? data.labelsString.split(',').map((l: string) => l.trim()).filter(Boolean)
       : []
@@ -74,22 +74,30 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
       estimatedTime: Number(data.estimatedTime) || 30,
     }
 
-    if (taskToEdit) {
-      updateTask(taskToEdit.id, taskPayload)
+    try {
+      if (taskToEdit) {
+        await updateTask(taskToEdit.id, taskPayload)
+        addToast({
+          type: 'success',
+          title: 'Task Updated',
+          message: `Successfully saved changes to "${data.title}".`,
+        })
+      } else {
+        await addTask(taskPayload)
+        addToast({
+          type: 'success',
+          title: 'Task Created',
+          message: `Successfully created new task "${data.title}".`,
+        })
+      }
+      onClose()
+    } catch (err: any) {
       addToast({
-        type: 'success',
-        title: 'Task Updated',
-        message: `Successfully saved changes to "${data.title}".`,
-      })
-    } else {
-      addTask(taskPayload)
-      addToast({
-        type: 'success',
-        title: 'Task Created',
-        message: `Successfully created new task "${data.title}".`,
+        type: 'error',
+        title: 'Task Operation Failed',
+        message: err.message || 'Something went wrong.',
       })
     }
-    onClose()
   }
 
   return (

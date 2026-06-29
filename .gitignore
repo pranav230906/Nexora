@@ -17,6 +17,8 @@ dist-ssr
 venv
 .env
 .env.*
+backend/.env
+frontend/.env
 !.env.example
 *.json.key
 firebase-key.json

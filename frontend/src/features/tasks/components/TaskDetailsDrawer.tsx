@@ -22,24 +22,24 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({ taskId, on
 
   if (!task) return null
 
-  const handleAddSubtask = (e: React.FormEvent) => {
+  const handleAddSubtask = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newSubtaskTitle.trim()) return
-    addSubtask(task.id, newSubtaskTitle)
+    await addSubtask(task.id, newSubtaskTitle)
     setNewSubtaskTitle('')
   }
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCommentText.trim()) return
-    addComment(task.id, newCommentText)
+    await addComment(task.id, newCommentText)
     setNewCommentText('')
   }
 
-  const handleAddAttachment = () => {
-    const fileNames = ['log_files.txt', 'wireframe_v2.png', 'notes.md']
-    const randomName = fileNames[Math.floor(Math.random() * fileNames.length)]
-    addAttachment(task.id, randomName, '240 KB')
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      await addAttachment(task.id, e.target.files[0])
+    }
   }
 
   return (
@@ -180,9 +180,10 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({ taskId, on
                   <h4 className="font-semibold text-sm flex items-center gap-2">
                     <Paperclip className="h-4 w-4 text-primary" /> Attachments
                   </h4>
-                  <button onClick={handleAddAttachment} className="text-xs font-semibold text-primary hover:underline cursor-pointer">
+                  <label className="text-xs font-semibold text-primary hover:underline cursor-pointer">
                     + Add File
-                  </button>
+                    <input type="file" onChange={handleFileChange} className="hidden" />
+                  </label>
                 </div>
                 {task.attachments.length === 0 ? (
                   <p className="text-xs text-muted-foreground">No files attached.</p>

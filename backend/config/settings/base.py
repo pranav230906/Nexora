@@ -39,6 +39,7 @@ INSTALLED_APPS = [
 
     # Internal Apps
     'apps.authentication',
+    'apps.tasks',
 ]
 
 MIDDLEWARE = [

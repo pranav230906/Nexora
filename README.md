@@ -1,6 +1,6 @@
-# 🧬 Life Saver
+# 🧬 Nexora: Defeat Deadlines
 
-> **Life Saver** is a premium, AI-powered personal productivity assistant and organizer designed to gamify, structure, and automate your daily life. It brings together task scheduling, habits, calendar integration, and AI-driven intelligence under one unified, visually stunning interface.
+> **Nexora: Defeat Deadlines** is a gamified, AI-powered personal productivity assistant and organizer designed to gamify, structure, and automate your daily life. It brings together task scheduling, habits, calendar integration, and AI-driven intelligence under one unified, visually stunning interface.
 
 ---
 

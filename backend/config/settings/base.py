@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'apps.analytics',
     'apps.sync',
     'apps.ai_action_engine',
+    'apps.email_intelligence',
 ]
 
 MIDDLEWARE = [

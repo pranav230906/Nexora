@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/v1/analytics/', include('apps.analytics.urls', namespace='analytics')),
     path('api/v1/sync/', include('apps.sync.urls', namespace='sync')),
     path('api/v1/action-engine/', include('apps.ai_action_engine.urls', namespace='ai_action_engine')),
+    path('api/v1/gmail/', include('apps.email_intelligence.urls', namespace='email_intelligence')),
 ]

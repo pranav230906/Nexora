@@ -30,7 +30,7 @@ import { useToastStore } from '@/store/useToastStore'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
 import { cn } from '@/utils/cn'
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 export const AnalyticsPage: React.FC = () => {
   const addToast = useToastStore((state) => state.addToast)
@@ -73,10 +73,8 @@ export const AnalyticsPage: React.FC = () => {
         title: 'Report Queued',
         message: `Your ${reportType.toLowerCase()} report task is now compiling with AI insights. Refresh in a few seconds!`,
       })
-      // Clear inputs
       setStartDate('')
       setEndDate('')
-      // Poll reports list after 5 seconds
       setTimeout(() => fetchReports(), 5000)
     } catch (err) {
       addToast({
@@ -87,7 +85,6 @@ export const AnalyticsPage: React.FC = () => {
     }
   }
 
-  // Fallbacks if Time Distribution is empty
   const timeDistData = dashboard?.time_distribution?.length
     ? dashboard.time_distribution
     : [
@@ -99,89 +96,91 @@ export const AnalyticsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
         <div>
-          <h1 className="font-display font-bold text-3xl tracking-tight text-foreground flex items-center gap-2.5">
-            <Activity className="h-7 w-7 text-primary" />
+          <h1 className="font-display font-black text-3xl tracking-tight text-foreground flex items-center gap-2.5">
+            <Activity className="h-7 w-7 text-primary animate-pulse" />
             Analytics Dashboard
           </h1>
           <p className="text-sm text-muted-foreground">Productivity statistics, deep work hours, and coaching telemetry.</p>
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              fetchDashboard()
-              fetchReports()
-            }}
-            leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
-          >
-            Sync Telemetry
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            fetchDashboard()
+            fetchReports()
+          }}
+          className="btn-bounce h-9 gap-1.5"
+          leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+        >
+          Sync Telemetry
+        </Button>
       </div>
 
       {/* 1. Score Overview widgets row */}
       {isLoading ? (
-        <div className="py-20 text-center text-xs text-muted-foreground">Syncing metrics data...</div>
+        <div className="py-20 text-center flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-xs text-muted-foreground">Syncing metrics data...</p>
+        </div>
       ) : dashboard ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Productivity Score gauge */}
-          <Card className="relative overflow-hidden bg-primary/5 border-primary/20 text-left">
+          <Card className="relative overflow-hidden bg-primary/5 border-primary/20 text-left shadow-lg hover:-translate-y-1 transition-all duration-300">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
             <CardHeader className="pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">Productivity Score</span>
+              <span className="text-xs font-black uppercase tracking-wider text-muted-foreground block">Productivity Score</span>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between items-baseline">
-                <span className="font-display font-black text-3xl">{dashboard.productivity_score}%</span>
-                <span className="text-xs font-bold text-primary">Efficiency Target</span>
+                <span className="font-display font-black text-3xl text-primary">{dashboard.productivity_score}%</span>
+                <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase">Target</span>
               </div>
-              <Progress value={dashboard.productivity_score} className="h-2" color="bg-primary" />
+              <Progress value={dashboard.productivity_score} className="h-2 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
             </CardContent>
           </Card>
 
           {/* Focus Hours summary */}
-          <Card className="text-left">
+          <Card className="text-left shadow-lg hover:-translate-y-1 transition-all duration-300 border-primary/5">
             <CardHeader className="pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">Focus Duration</span>
+              <span className="text-xs font-black uppercase tracking-wider text-muted-foreground block">Focus Duration</span>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="space-y-2">
               <div className="flex items-baseline gap-2">
                 <span className="font-display font-black text-3xl">{dashboard.focus_hours}h</span>
-                <Badge variant="primary" className="text-[10px]">Active</Badge>
+                <Badge variant="primary" className="text-[9px] font-black uppercase">Active</Badge>
               </div>
-              <p className="text-[10px] text-muted-foreground">Total deep focus hours logged.</p>
+              <p className="text-[10px] text-muted-foreground font-semibold">Total deep focus hours logged.</p>
             </CardContent>
           </Card>
 
           {/* Task Completion Rate summary */}
-          <Card className="text-left">
+          <Card className="text-left shadow-lg hover:-translate-y-1 transition-all duration-300 border-primary/5">
             <CardHeader className="pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">Completion Rate</span>
+              <span className="text-xs font-black uppercase tracking-wider text-muted-foreground block">Completion Rate</span>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="space-y-2">
               <div className="flex items-baseline gap-2">
                 <span className="font-display font-black text-3xl">{dashboard.task_completion_rate}%</span>
-                <Badge variant="success" className="text-[10px]">Ratio</Badge>
+                <Badge variant="success" className="text-[9px] font-black uppercase">Ratio</Badge>
               </div>
-              <p className="text-[10px] text-muted-foreground">Ratio of created vs completed tasks.</p>
+              <p className="text-[10px] text-muted-foreground font-semibold">Ratio of created vs completed tasks.</p>
             </CardContent>
           </Card>
 
           {/* Habit Consistency summary */}
-          <Card className="text-left">
+          <Card className="text-left shadow-lg hover:-translate-y-1 transition-all duration-300 border-primary/5">
             <CardHeader className="pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">Habits Consistency</span>
+              <span className="text-xs font-black uppercase tracking-wider text-muted-foreground block">Habits Consistency</span>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="space-y-2">
               <div className="flex items-baseline gap-2">
                 <span className="font-display font-black text-3xl">{dashboard.habit_consistency}%</span>
-                <Badge className="text-[10px] bg-orange-500/10 border-orange-500/20 text-orange-500">Streak</Badge>
+                <Badge className="text-[9px] font-black uppercase bg-orange-500/10 border-orange-500/20 text-orange-500">Streak</Badge>
               </div>
-              <p className="text-[10px] text-muted-foreground">Habit completions over 30 days.</p>
+              <p className="text-[10px] text-muted-foreground font-semibold">Habit completions over 30 days.</p>
             </CardContent>
           </Card>
         </div>
@@ -192,57 +191,92 @@ export const AnalyticsPage: React.FC = () => {
       {/* 2. Charts and Time Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Task completion rate by Category / Tag labels */}
-        <Card className="lg:col-span-2 text-left">
+        <Card className="lg:col-span-2 text-left shadow-lg">
           <CardHeader>
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <CardTitle className="text-sm font-black flex items-center gap-2">
               <TrendingUp className="h-4.5 w-4.5 text-primary" /> Task Distribution by Labels
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-64 pt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={timeDistData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
-                <RechartsTooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '11px' }} />
-                <Bar dataKey="value" fill="var(--color-primary, hsl(var(--primary)))" radius={[4, 4, 0, 0]} name="Tasks Weight" />
+              <BarChart data={timeDistData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(263, 80%, 65%)" />
+                    <stop offset="100%" stopColor="hsl(263, 80%, 45%)" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="color-mix(in srgb, hsl(var(--border)) 70%, transparent)" />
+                <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={10} fontWeight="600" tickLine={false} axisLine={false} dy={8} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} fontWeight="600" tickLine={false} axisLine={false} dx={-8} />
+                <RechartsTooltip
+                  cursor={false}
+                  contentStyle={{
+                    background: 'color-mix(in srgb, hsl(var(--card)) 85%, transparent)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid color-mix(in srgb, hsl(var(--border)) 80%, transparent)',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
+                    fontSize: '11px',
+                    fontWeight: '700'
+                  }}
+                />
+                <Bar dataKey="value" fill="url(#barGradient)" radius={[8, 8, 0, 0]} name="Tasks Weight" maxBarSize={32} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Time Distribution Pie */}
-        <Card className="text-left">
+        {/* Time Distribution Pie as a premium Donut */}
+        <Card className="text-left shadow-lg relative">
           <CardHeader>
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <CardTitle className="text-sm font-black flex items-center gap-2">
               <Clock className="h-4.5 w-4.5 text-primary" /> Label Share Ratio
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-64 flex flex-col justify-center items-center">
-            <div className="w-full h-44">
+          <CardContent className="h-64 flex flex-col justify-center items-center relative">
+            <div className="w-full h-44 relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={timeDistData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={75}
-                    paddingAngle={3}
+                    innerRadius={58}
+                    outerRadius={74}
+                    paddingAngle={4}
                     dataKey="value"
                     nameKey="label"
                   >
                     {timeDistData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} style={{ filter: 'drop-shadow(0px 4px 10px rgba(0,0,0,0.05))' }} />
                     ))}
                   </Pie>
-                  <RechartsTooltip />
+                  <RechartsTooltip
+                    contentStyle={{
+                      background: 'color-mix(in srgb, hsl(var(--card)) 85%, transparent)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid color-mix(in srgb, hsl(var(--border)) 80%, transparent)',
+                      borderRadius: '16px',
+                      fontSize: '11px',
+                      fontWeight: '700'
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
+              
+              {/* Donut Center text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</span>
+                <span className="text-xl font-black font-display text-foreground leading-none">
+                  {timeDistData.reduce((acc, curr) => acc + curr.value, 0)}
+                </span>
+              </div>
             </div>
+            
             <div className="flex flex-wrap gap-2 justify-center pt-2 max-h-16 overflow-y-auto">
               {timeDistData.map((entry, idx) => (
-                <div key={idx} className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
+                <div key={idx} className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                   {entry.label}
                 </div>
@@ -255,20 +289,20 @@ export const AnalyticsPage: React.FC = () => {
       {/* 3. AI Reports & Manual Compiler Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Compiler Form */}
-        <Card className="text-left">
+        <Card className="text-left shadow-lg">
           <CardHeader className="border-b border-border/40 pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
+            <CardTitle className="text-sm font-black flex items-center gap-2">
               <Calendar className="h-4.5 w-4.5 text-primary" /> Compile Performance Report
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <form onSubmit={handleGenerateReport} className="space-y-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Report Interval</label>
+                <label className="text-xs font-bold text-muted-foreground">Report Interval</label>
                 <select
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value as any)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="WEEKLY">Weekly Performance</option>
                   <option value="MONTHLY">Monthly Performance</option>
@@ -277,26 +311,26 @@ export const AnalyticsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Start Date</label>
+                  <label className="text-xs font-bold text-muted-foreground">Start Date</label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2"
+                    className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">End Date</label>
+                  <label className="text-xs font-bold text-muted-foreground">End Date</label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none"
+                    className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none"
                   />
                 </div>
               </div>
 
-              <Button type="submit" variant="primary" className="w-full" disabled={isTriggering}>
+              <Button type="submit" variant="primary" className="w-full btn-bounce shadow-lg shadow-primary/20" disabled={isTriggering}>
                 {isTriggering ? 'Compiling AI Telemetry...' : 'Compile Report'}
               </Button>
             </form>
@@ -304,43 +338,43 @@ export const AnalyticsPage: React.FC = () => {
         </Card>
 
         {/* AI Performance Reports and Insights list */}
-        <Card className="lg:col-span-2 text-left">
+        <Card className="lg:col-span-2 text-left shadow-lg">
           <CardHeader className="border-b border-border/40 pb-3 bg-secondary/5">
-            <CardTitle className="text-sm flex items-center gap-2">
+            <CardTitle className="text-sm font-black flex items-center gap-2">
               <Sparkles className="h-4.5 w-4.5 text-primary animate-pulse" />
               AI Coach Performance Reports
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4 max-h-[300px] overflow-y-auto">
             {reports.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-10 text-center">No compiled reports found. Generate one using the form!</p>
+              <p className="text-xs text-muted-foreground py-10 text-center font-semibold">No compiled reports found. Generate one using the form!</p>
             ) : (
               reports.map((report) => (
-                <div key={report.id} className="p-4 rounded-xl border border-border bg-secondary/5 space-y-3">
+                <div key={report.id} className="p-4 rounded-2xl border border-border bg-secondary/5 space-y-3">
                   <div className="flex justify-between items-center flex-wrap gap-2">
                     <div>
                       <span className="text-[10px] font-black uppercase tracking-wider text-primary">
                         {report.report_type} Report
                       </span>
-                      <h4 className="text-xs font-bold text-foreground">
+                      <h4 className="text-xs font-black text-foreground">
                         {report.start_date} to {report.end_date}
                       </h4>
                     </div>
                     <div className="flex gap-2">
-                      <Badge variant="outline" className="text-[9px] uppercase">
+                      <Badge variant="outline" className="text-[9px] font-black uppercase">
                         Score: {report.productivity_score}%
                       </Badge>
-                      <Badge variant="secondary" className="text-[9px] uppercase">
+                      <Badge variant="secondary" className="text-[9px] font-black uppercase">
                         Focus: {report.focus_hours.toFixed(1)}h
                       </Badge>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-lg border border-primary/10 bg-primary/5 text-left space-y-1">
-                    <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider">
-                      <Zap className="h-3.5 w-3.5 fill-current" /> AI Coach Feedback & Action Items
+                  <div className="p-3.5 rounded-xl border border-primary/10 bg-primary/5 text-left space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-wider">
+                      <Zap className="h-3.5 w-3.5 fill-current animate-bounce" /> AI Coach Feedback & Action Items
                     </div>
-                    <div className="text-[10px] text-muted-foreground leading-relaxed whitespace-pre-line">
+                    <div className="text-[10px] text-muted-foreground leading-relaxed whitespace-pre-line font-medium">
                       {report.ai_insights}
                     </div>
                   </div>
@@ -353,5 +387,13 @@ export const AnalyticsPage: React.FC = () => {
     </div>
   )
 }
+
+// Loader mock icon
+const Loader2 = ({ className }: { className?: string }) => (
+  <svg className={cn("animate-spin", className)} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+)
 
 export default AnalyticsPage

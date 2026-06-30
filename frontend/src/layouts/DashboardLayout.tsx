@@ -19,6 +19,9 @@ import {
   BarChart3,
   MessageSquare,
   Bell,
+  Flame,
+  Award,
+  Zap,
 } from 'lucide-react'
 import { useTheme } from '@/context/ThemeContext'
 import { useAppStore } from '@/store/useAppStore'
@@ -29,6 +32,7 @@ import { FloatingAiButton } from '@/components/ui/FloatingAiButton'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { cn } from '@/utils/cn'
 import apiClient from '@/services/apiClient'
+import { Progress } from '@/components/ui/Progress'
 
 export const DashboardLayout: React.FC = () => {
   const { theme, setTheme } = useTheme()
@@ -49,9 +53,10 @@ export const DashboardLayout: React.FC = () => {
         .catch((err) => {
           console.error("Failed to load user profile:", err)
           logout()
+          navigate('/login')
         })
     }
-  }, [user, setUser, logout])
+  }, [user, setUser, logout, navigate])
 
   const handleLogout = () => {
     logout()
@@ -75,13 +80,12 @@ export const DashboardLayout: React.FC = () => {
   const userName = user?.name || user?.username || ''
 
   const profileDropdownItems = [
-    { label: 'View Profile', onClick: () => navigate('/settings') },
-    { label: 'System Diagnostics', onClick: () => {} },
+    { label: 'View Profile', onClick: () => navigate('/dashboard/settings') },
     { label: 'Sign Out', onClick: handleLogout, destructive: true },
   ]
 
   const renderNavContent = () => (
-    <nav className="space-y-1.5 flex-1 py-4">
+    <nav className="space-y-1 flex-1 py-4">
       {navItems.map((item) => {
         const isActive = location.pathname === item.path
         return (
@@ -90,14 +94,21 @@ export const DashboardLayout: React.FC = () => {
             to={item.path}
             onClick={() => setMobileSidebarOpen(false)}
             className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all relative overflow-hidden',
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all relative overflow-hidden btn-bounce',
               isActive
-                ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                 : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
             )}
           >
             {item.icon}
             <span className={cn(sidebarCollapsed ? 'lg:hidden' : 'block')}>{item.label}</span>
+            {isActive && (
+              <motion.div
+                layoutId="activeNavIndicator"
+                className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-primary-foreground rounded-r-full"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
           </Link>
         )
       })}
@@ -105,7 +116,7 @@ export const DashboardLayout: React.FC = () => {
   )
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground transition-all duration-300">
       {/* 1. Desktop Sidebar */}
       <motion.aside
         animate={{ width: sidebarCollapsed ? 76 : 256 }}
@@ -115,12 +126,12 @@ export const DashboardLayout: React.FC = () => {
         <div className="flex flex-col px-4 pt-4 overflow-y-auto flex-1">
           {/* Sidebar Brand Header */}
           <div className="h-12 flex items-center gap-3 border-b border-border/60 pb-3">
-            <span className="h-7 w-7 rounded bg-primary flex items-center justify-center text-primary-foreground text-xs font-black shadow">
+            <span className="h-8 w-8 rounded-xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-primary-foreground text-sm font-black shadow-lg shadow-primary/30">
               N
             </span>
             <span
               className={cn(
-                'font-display font-bold text-sm tracking-tight truncate transition-opacity',
+                'font-display font-black text-base tracking-tight truncate transition-opacity',
                 sidebarCollapsed && 'lg:hidden',
               )}
             >
@@ -137,13 +148,13 @@ export const DashboardLayout: React.FC = () => {
           {/* Theme Button */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+            className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer btn-bounce"
           >
             <span className="flex items-center gap-2">
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               <span className={sidebarCollapsed ? 'lg:hidden' : 'block'}>Theme Mode</span>
             </span>
-            <span className={cn('text-[10px] uppercase font-bold tracking-wider', sidebarCollapsed ? 'lg:hidden' : 'block')}>
+            <span className={cn('text-[10px] uppercase font-black tracking-wider px-1.5 py-0.5 rounded bg-muted', sidebarCollapsed ? 'lg:hidden' : 'block')}>
               {theme}
             </span>
           </button>
@@ -151,7 +162,7 @@ export const DashboardLayout: React.FC = () => {
           {/* Collapse sidebar toggle */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:flex items-center justify-center w-full py-1.5 rounded-lg border border-border/60 text-xs font-semibold hover:bg-secondary text-muted-foreground transition-all cursor-pointer"
+            className="hidden lg:flex items-center justify-center w-full py-2 rounded-xl border border-border/60 text-xs font-bold hover:bg-secondary text-muted-foreground transition-all cursor-pointer btn-bounce"
           >
             {sidebarCollapsed ? '→' : '← Collapse'}
           </button>
@@ -180,7 +191,7 @@ export const DashboardLayout: React.FC = () => {
             >
               <div className="flex flex-col">
                 <div className="flex items-center justify-between pb-4 border-b border-border">
-                  <span className="font-display font-bold text-lg tracking-tight">Nexora</span>
+                  <span className="font-display font-black text-lg tracking-tight">Nexora</span>
                   <button
                     onClick={() => setMobileSidebarOpen(false)}
                     className="p-1 rounded-full hover:bg-secondary text-muted-foreground"
@@ -236,7 +247,7 @@ export const DashboardLayout: React.FC = () => {
                 placeholder="Search command or task..."
                 value={searchVal}
                 onChange={(e) => setSearchVal(e.target.value)}
-                className="w-full h-9 pl-9 pr-12 rounded-lg border border-input bg-background/50 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="w-full h-9 pl-9 pr-12 rounded-xl border border-input bg-background/50 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border/80">
                 <Command className="h-2.5 w-2.5" />
@@ -245,8 +256,23 @@ export const DashboardLayout: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Header Navigation Panel controls */}
+          {/* Right Header Gamified telemetry dashboard controls */}
           <div className="flex items-center gap-4">
+            {/* Daily Streak Fire Counter */}
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-all font-display font-black text-xs">
+              <Flame className="h-4 w-4 fill-amber-500/20 animate-bounce" />
+              <span>7 DAYS</span>
+            </div>
+
+            {/* XP Level Telemetry status */}
+            <div className="hidden lg:flex flex-col w-32 space-y-1">
+              <div className="flex justify-between items-center text-[10px] font-bold">
+                <span className="text-primary flex items-center gap-1"><Award className="h-3 w-3" /> LV. 14</span>
+                <span className="text-muted-foreground">1,850/2,000 XP</span>
+              </div>
+              <Progress value={92} className="h-1.5 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
+            </div>
+
             <QuickActions />
             <NotificationPanel />
 
@@ -256,7 +282,7 @@ export const DashboardLayout: React.FC = () => {
             <div className="flex items-center gap-2 select-none">
               <Dropdown
                 trigger={
-                  <div className="flex items-center gap-2 hover:bg-secondary/40 p-1.5 rounded-lg cursor-pointer transition-colors">
+                  <div className="flex items-center gap-2 hover:bg-secondary/40 p-1.5 rounded-xl cursor-pointer transition-colors">
                     <Avatar fallback={userName} size="sm" status="online" />
                     <div className="hidden lg:flex flex-col text-left">
                       <span className="text-xs font-semibold leading-none">{userName}</span>
@@ -272,7 +298,7 @@ export const DashboardLayout: React.FC = () => {
         </header>
 
         {/* Content Outlet with smooth animations */}
-        <main className="flex-grow overflow-y-auto px-6 py-6 md:px-12 md:py-10 lg:px-20 lg:py-16 relative">
+        <main className="flex-grow overflow-y-auto px-4 py-6 md:px-8 md:py-8 lg:px-12 lg:py-10 relative">
           <div className="max-w-7xl mx-auto w-full">
             <Outlet />
           </div>

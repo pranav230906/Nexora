@@ -153,7 +153,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         status: mapStatusToBackend(task.status),
         priority: mapPriorityToBackend(task.priority),
         due_date: task.dueDate 
-          ? (task.dueDate.includes('T') ? `${task.dueDate}:00Z` : `${task.dueDate}T12:00:00Z`)
+          ? (task.dueDate.endsWith('Z') 
+              ? task.dueDate 
+              : (task.dueDate.includes('T') ? `${task.dueDate}:00Z` : `${task.dueDate}T12:00:00Z`))
           : null,
         estimated_time: task.estimatedTime || 0,
         tag_ids: tagIds,
@@ -181,7 +183,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       if (updatedFields.priority !== undefined) payload.priority = mapPriorityToBackend(updatedFields.priority)
       if (updatedFields.dueDate !== undefined) {
         payload.due_date = updatedFields.dueDate
-          ? (updatedFields.dueDate.includes('T') ? `${updatedFields.dueDate}:00Z` : `${updatedFields.dueDate}T12:00:00Z`)
+          ? (updatedFields.dueDate.endsWith('Z') 
+              ? updatedFields.dueDate 
+              : (updatedFields.dueDate.includes('T') ? `${updatedFields.dueDate}:00Z` : `${updatedFields.dueDate}T12:00:00Z`))
           : null
       }
       if (updatedFields.estimatedTime !== undefined) payload.estimated_time = updatedFields.estimatedTime

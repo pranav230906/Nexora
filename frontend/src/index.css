@@ -9,17 +9,17 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  --background: 240 15% 98%; /* Premium soft gray light-mode background */
+  --foreground: 224 71.4% 4.1%;
 
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  --card-foreground: 224 71.4% 4.1%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
+  --popover-foreground: 224 71.4% 4.1%;
 
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
+  --primary: 263.4 80% 50.4%; /* Elegant Indigo/Violet accent */
+  --primary-foreground: 210 20% 98%;
 
   --secondary: 240 4.8% 95.9%;
   --secondary-foreground: 240 5.9% 10%;
@@ -27,36 +27,36 @@
   --muted: 240 4.8% 95.9%;
   --muted-foreground: 240 3.8% 46.1%;
 
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
+  --accent: 262 80% 96%;
+  --accent-foreground: 263.4 80% 50.4%;
 
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive-foreground: 210 20% 98%;
 
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
-  --ring: 240 5.9% 10%;
+  --ring: 263.4 80% 50.4%;
 
-  --radius: 0.5rem;
+  --radius: 1rem; /* 16px border-radius standard */
 }
 
 .dark {
-  --background: 240 10% 3.9%;
+  --background: 240 10% 3.9%; /* Rich deep black OLED-friendly */
   --foreground: 0 0% 98%;
 
-  --card: 240 10% 3.9%;
+  --card: 240 10% 5%; /* Layered surface */
   --card-foreground: 0 0% 98%;
 
   --popover: 240 10% 3.9%;
   --popover-foreground: 0 0% 98%;
 
-  --primary: 0 0% 98%;
+  --primary: 263.4 90% 65%;
   --primary-foreground: 240 5.9% 10%;
 
-  --secondary: 240 3.7% 15.9%;
+  --secondary: 240 3.7% 12%;
   --secondary-foreground: 0 0% 98%;
 
-  --muted: 240 3.7% 15.9%;
+  --muted: 240 3.7% 12%;
   --muted-foreground: 240 5% 64.9%;
 
   --accent: 240 3.7% 15.9%;
@@ -65,9 +65,9 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
+  --border: 240 3.7% 12%;
+  --input: 240 3.7% 12%;
+  --ring: 263.4 90% 65%;
 }
 
 @layer base {
@@ -80,6 +80,10 @@
     color: hsl(var(--foreground));
     font-family: var(--font-sans);
     transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  select option {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
   }
 }
 
@@ -104,4 +108,17 @@
   background: color-mix(in srgb, hsl(var(--card)) 70%, transparent);
   backdrop-filter: blur(12px);
   border: 1px solid color-mix(in srgb, hsl(var(--border)) 50%, transparent);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+.dark .glass-card {
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Duolingo style button bounce */
+.btn-bounce {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.btn-bounce:active {
+  transform: translateY(2px);
 }

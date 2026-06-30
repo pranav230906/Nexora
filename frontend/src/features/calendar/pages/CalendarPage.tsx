@@ -9,7 +9,10 @@ import {
   Share2,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
+  CalendarDays,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -39,6 +42,12 @@ export const CalendarPage: React.FC = () => {
   // Date State for Navigation
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
 
+  // Selected event for interactive details drawer
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null)
+
+  // Track slide direction for transition animations
+  const [slideDirection, setSlideDirection] = useState<number>(0)
+
   useEffect(() => {
     fetchTasks()
     fetchConnectionStatus()
@@ -54,7 +63,7 @@ export const CalendarPage: React.FC = () => {
           await exchangeAuthCode(code, redirectUri)
           addToast({
             type: 'success',
-            title: 'Calendar Linked!',
+            title: 'Calendar Linked! 🎉',
             message: 'Successfully linked your Google Calendar.'
           })
           window.history.replaceState(null, '', window.location.pathname)
@@ -81,7 +90,7 @@ export const CalendarPage: React.FC = () => {
       await syncTasks()
       addToast({
         type: 'success',
-        title: 'Synchronized!',
+        title: 'Synchronized! 🔄',
         message: 'Backend tasks successfully synced to your Google Calendar.'
       })
     }
@@ -96,6 +105,7 @@ export const CalendarPage: React.FC = () => {
       time: string
       type: 'task' | 'meeting'
       link?: string
+      priority?: string
     }> = []
 
     tasks.forEach((task) => {
@@ -105,7 +115,8 @@ export const CalendarPage: React.FC = () => {
           title: task.title,
           date: task.dueDate.split('T')[0],
           time: task.dueDate.includes('T') ? task.dueDate.split('T')[1].substring(0, 5) : 'Due Date',
-          type: 'task'
+          type: 'task',
+          priority: task.priority
         })
       }
     })
@@ -133,15 +144,25 @@ export const CalendarPage: React.FC = () => {
 
   const allEvents = getCalendarEvents()
 
+  // Classify future events starting from today's date
+  const todayStr = new Date().toISOString().split('T')[0]
+  const futureTasks = allEvents
+    .filter((e) => e.type === 'task' && e.date >= todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))
+  const futureMeetings = allEvents
+    .filter((e) => e.type === 'meeting' && e.date >= todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))
+
   const getEventBg = (type: 'task' | 'meeting') => {
     if (type === 'meeting') {
-      return 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20'
+      return 'bg-violet-500/10 border-violet-500/20 text-violet-500 hover:bg-violet-500/20'
     }
-    return 'bg-primary/5 border-primary/20 text-primary hover:bg-primary/10'
+    return 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/20'
   }
 
-  // Navigation Handlers
+  // Navigation Handlers with animation direction set
   const handlePrev = () => {
+    setSlideDirection(-1)
     if (activeTab === 'month') {
       setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
     } else if (activeTab === 'week') {
@@ -152,6 +173,7 @@ export const CalendarPage: React.FC = () => {
   }
 
   const handleNext = () => {
+    setSlideDirection(1)
     if (activeTab === 'month') {
       setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
     } else if (activeTab === 'week') {
@@ -162,7 +184,28 @@ export const CalendarPage: React.FC = () => {
   }
 
   const handleToday = () => {
+    setSlideDirection(0)
     setCurrentDate(new Date())
+  }
+
+  // Animation variants for smooth sliding calendar transitions
+  const calendarVariants = {
+    initial: (direction: number) => ({
+      opacity: 0,
+      x: direction > 0 ? 40 : direction < 0 ? -40 : 0,
+      y: direction === 0 ? 10 : 0,
+    }),
+    animate: {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      transition: { duration: 0.25, ease: 'easeOut' },
+    },
+    exit: (direction: number) => ({
+      opacity: 0,
+      x: direction > 0 ? -40 : direction < 0 ? 40 : 0,
+      transition: { duration: 0.15, ease: 'easeIn' },
+    }),
   }
 
   // View renderer: Month
@@ -177,7 +220,6 @@ export const CalendarPage: React.FC = () => {
 
     const cells: Array<{ day: number; dateStr: string; isCurrentMonth: boolean }> = []
 
-    // Previous month padding cells
     for (let i = startOffset - 1; i >= 0; i--) {
       const prevDay = prevTotalDays - i
       const prevMonth = month === 0 ? 11 : month - 1
@@ -189,7 +231,6 @@ export const CalendarPage: React.FC = () => {
       })
     }
 
-    // Current month cells
     for (let i = 1; i <= totalDays; i++) {
       cells.push({
         day: i,
@@ -198,7 +239,6 @@ export const CalendarPage: React.FC = () => {
       })
     }
 
-    // Next month padding cells
     let nextMonthDay = 1
     while (cells.length < 42) {
       const nextMonth = month === 11 ? 0 : month + 1
@@ -212,9 +252,9 @@ export const CalendarPage: React.FC = () => {
     }
 
     return (
-      <div className="grid grid-cols-7 gap-1.5 border border-border bg-card p-3 rounded-lg animate-in fade-in duration-200">
+      <div className="grid grid-cols-7 gap-2 border border-border bg-card p-4 rounded-2xl shadow-lg">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-          <div key={day} className="text-center font-bold text-xs py-1.5 text-muted-foreground uppercase">{day}</div>
+          <div key={day} className="text-center font-black text-xs py-2 text-muted-foreground uppercase tracking-wider">{day}</div>
         ))}
         {cells.map(({ day, dateStr, isCurrentMonth }) => {
           const dayEvents = allEvents.filter((e) => e.date === dateStr)
@@ -224,26 +264,28 @@ export const CalendarPage: React.FC = () => {
             <div
               key={dateStr}
               className={cn(
-                'min-h-[100px] border border-border/40 rounded p-2 flex flex-col justify-between transition-colors',
-                isCurrentMonth ? 'bg-secondary/5' : 'bg-secondary/1 opacity-40',
-                isToday && 'border-primary/60 bg-primary/5 ring-1 ring-primary/20'
+                'min-h-[110px] border border-border/40 rounded-xl p-2.5 flex flex-col justify-between transition-all duration-200',
+                isCurrentMonth ? 'bg-secondary/5' : 'bg-secondary/1 opacity-30',
+                isToday && 'border-primary bg-primary/5 ring-1 ring-primary/20'
               )}
             >
-              <span className={cn('text-xs font-bold', isToday ? 'text-primary' : 'text-muted-foreground')}>
+              <span className={cn('text-xs font-black', isToday ? 'text-primary' : 'text-muted-foreground')}>
                 {day}
               </span>
-              <div className="space-y-1 mt-2 flex-grow overflow-y-auto max-h-[70px]">
+              <div className="space-y-1.5 mt-2 flex-grow overflow-y-auto max-h-[80px]">
                 {dayEvents.map((ev) => (
-                  <div
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
                     key={ev.id}
+                    onClick={() => setSelectedEvent(ev)}
                     className={cn(
-                      'text-[9px] font-bold p-1 rounded border truncate cursor-pointer leading-none text-left',
+                      'text-[9px] font-black p-1.5 rounded-lg border truncate cursor-pointer leading-none text-left shadow-sm',
                       getEventBg(ev.type)
                     )}
                     title={`${ev.title} (${ev.time})`}
                   >
                     {ev.title}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -255,7 +297,6 @@ export const CalendarPage: React.FC = () => {
 
   // View renderer: Week
   const renderWeekView = () => {
-    // Find the Monday of the current selected week
     const currentDay = currentDate.getDay()
     const offsetToMonday = currentDay === 0 ? -6 : 1 - currentDay
     const monday = new Date(currentDate.getTime() + offsetToMonday * 24 * 60 * 60 * 1000)
@@ -269,7 +310,7 @@ export const CalendarPage: React.FC = () => {
     })
 
     return (
-      <div className="grid grid-cols-7 gap-2 border border-border bg-card p-4 rounded-lg animate-in fade-in duration-200 overflow-x-auto min-w-[700px]">
+      <div className="grid grid-cols-7 gap-3 border border-border bg-card p-5 rounded-2xl shadow-lg overflow-x-auto min-w-[700px]">
         {daysOfWeek.map((day) => {
           const dayEvents = allEvents.filter((ev) => ev.date === day.date)
           const isToday = new Date().toISOString().split('T')[0] === day.date
@@ -278,25 +319,27 @@ export const CalendarPage: React.FC = () => {
             <div
               key={day.date}
               className={cn(
-                'space-y-3 min-h-[400px] border-r border-border/40 last:border-0 pr-2',
-                isToday && 'bg-primary/5 rounded-lg border border-primary/20 p-1'
+                'space-y-3 min-h-[420px] border-r border-border/40 last:border-0 pr-2.5',
+                isToday && 'bg-primary/5 rounded-xl border border-primary/20 p-1.5'
               )}
             >
-              <div className={cn('text-center font-bold text-xs border-b border-border pb-2 uppercase', isToday ? 'text-primary' : 'text-muted-foreground')}>
+              <div className={cn('text-center font-black text-xs border-b border-border pb-2.5 uppercase tracking-wider', isToday ? 'text-primary' : 'text-muted-foreground')}>
                 {day.label}
               </div>
               <div className="space-y-2">
                 {dayEvents.map((ev) => (
-                  <div
+                  <motion.div
+                    whileHover={{ scale: 1.02, y: -1 }}
                     key={ev.id}
+                    onClick={() => setSelectedEvent(ev)}
                     className={cn(
-                      'p-2.5 rounded-lg border text-xs font-semibold space-y-1.5 shadow-sm text-left',
+                      'p-3 rounded-xl border text-xs font-black space-y-1.5 shadow-sm text-left cursor-pointer transition-all duration-200',
                       getEventBg(ev.type)
                     )}
                   >
-                    <div className="truncate font-bold">{ev.title}</div>
-                    <span className="text-[10px] opacity-80 block">{ev.time}</span>
-                  </div>
+                    <div className="truncate font-black">{ev.title}</div>
+                    <span className="text-[9px] opacity-80 block font-bold">{ev.time}</span>
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -312,39 +355,41 @@ export const CalendarPage: React.FC = () => {
     const dayEvents = allEvents.filter((ev) => ev.date === dateStr)
 
     return (
-      <div className="border border-border bg-card p-4 rounded-lg space-y-4 animate-in fade-in duration-200 max-w-2xl mx-auto">
-        <h3 className="font-display font-semibold text-sm border-b border-border pb-2 text-muted-foreground uppercase text-left">
+      <div className="border border-border bg-card p-6 rounded-2xl shadow-lg space-y-5 max-w-2xl mx-auto">
+        <h3 className="font-display font-black text-sm border-b border-border pb-3 text-muted-foreground uppercase tracking-widest text-left">
           {currentDate.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </h3>
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {dayEvents.length === 0 ? (
-            <div className="text-center py-10 text-xs text-muted-foreground">No events planned for this day.</div>
+            <div className="text-center py-16 text-xs text-muted-foreground font-semibold">No events planned for this day.</div>
           ) : (
             dayEvents.map((ev) => (
-              <div
+              <motion.div
+                whileHover={{ scale: 1.01 }}
                 key={ev.id}
+                onClick={() => setSelectedEvent(ev)}
                 className={cn(
-                  'p-4 rounded-xl border flex items-center justify-between shadow-sm',
+                  'p-4.5 rounded-2xl border flex items-center justify-between shadow-sm cursor-pointer transition-all',
                   getEventBg(ev.type)
                 )}
               >
-                <div className="space-y-1 text-left">
-                  <span className="text-[9px] font-bold uppercase tracking-wider opacity-90">{ev.type}</span>
-                  <h4 className="text-sm font-bold">{ev.title}</h4>
-                  <span className="text-xs opacity-80 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {ev.time}</span>
+                <div className="space-y-1.5 text-left">
+                  <span className="text-[9px] font-black uppercase tracking-wider opacity-90">{ev.type}</span>
+                  <h4 className="text-sm font-black leading-snug">{ev.title}</h4>
+                  <span className="text-[10px] opacity-80 flex items-center gap-1 font-bold"><Clock className="h-3.5 w-3.5" /> {ev.time}</span>
                 </div>
                 {ev.link && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => window.open(ev.link, '_blank')}
-                    className="h-8 border-current text-current hover:bg-current/10"
+                    onClick={(e) => { e.stopPropagation(); window.open(ev.link, '_blank'); }}
+                    className="h-8 border-current text-current hover:bg-current/10 rounded-lg btn-bounce"
                     leftIcon={<Video className="h-3.5 w-3.5" />}
                   >
                     Join Meet
                   </Button>
                 )}
-              </div>
+              </motion.div>
             ))
           )}
         </div>
@@ -354,26 +399,25 @@ export const CalendarPage: React.FC = () => {
 
   // View renderer: Agenda
   const renderAgendaView = () => {
-    // Sort upcoming events relative to current date
     const targetDateStr = currentDate.toISOString().split('T')[0]
     const upcomingEvents = allEvents.filter((ev) => ev.date >= targetDateStr).sort((a, b) => a.date.localeCompare(b.date))
 
     return (
-      <div className="border border-border bg-card p-4 rounded-lg divide-y divide-border/60 max-w-2xl mx-auto animate-in fade-in duration-200">
+      <div className="border border-border bg-card p-6 rounded-2xl shadow-lg divide-y divide-border/60 max-w-2xl mx-auto">
         {upcomingEvents.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-8 text-center">No upcoming schedules.</p>
+          <p className="text-xs text-muted-foreground py-12 text-center font-semibold">No upcoming schedules.</p>
         ) : (
           upcomingEvents.map((ev) => (
-            <div key={ev.id} className="py-4 flex gap-4 items-start first:pt-0 last:pb-0">
-              <div className="w-24 text-xs font-bold text-muted-foreground text-left">{ev.date}</div>
-              <div className="flex-grow space-y-2 text-left">
+            <div key={ev.id} className="py-4.5 flex gap-4 items-start first:pt-0 last:pb-0 cursor-pointer" onClick={() => setSelectedEvent(ev)}>
+              <div className="w-24 text-xs font-black text-muted-foreground text-left">{ev.date}</div>
+              <div className="flex-grow space-y-2.5 text-left">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-foreground">{ev.title}</h4>
-                  <Badge variant={ev.type === 'meeting' ? 'primary' : 'outline'} className="text-[9px]">{ev.type}</Badge>
+                  <h4 className="text-sm font-black text-foreground">{ev.title}</h4>
+                  <Badge variant={ev.type === 'meeting' ? 'primary' : 'outline'} className="text-[9px] font-black uppercase tracking-wider">{ev.type}</Badge>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground font-semibold">
                   <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {ev.time}</span>
-                  {ev.link && <span className="flex items-center gap-1 text-primary cursor-pointer" onClick={() => window.open(ev.link, '_blank')}><Video className="h-3.5 w-3.5" /> Join Meet</span>}
+                  {ev.link && <span className="flex items-center gap-1 text-primary cursor-pointer font-bold" onClick={(e) => { e.stopPropagation(); window.open(ev.link, '_blank'); }}><Video className="h-3.5 w-3.5" /> Join Meet</span>}
                 </div>
               </div>
             </div>
@@ -383,13 +427,11 @@ export const CalendarPage: React.FC = () => {
     )
   }
 
-  // Helper title based on active tab
   const getHeaderTitle = () => {
     if (activeTab === 'month') {
       return currentDate.toLocaleDateString([], { month: 'long', year: 'numeric' })
     }
     if (activeTab === 'week') {
-      // Find the Monday of the current selected week
       const currentDay = currentDate.getDay()
       const offsetToMonday = currentDay === 0 ? -6 : 1 - currentDay
       const monday = new Date(currentDate.getTime() + offsetToMonday * 24 * 60 * 60 * 1000)
@@ -402,16 +444,15 @@ export const CalendarPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
         <div>
-          <h1 className="font-display font-bold text-3xl tracking-tight text-foreground flex items-center gap-2.5">
-            <Calendar className="h-7 w-7 text-primary" />
+          <h1 className="font-display font-black text-3xl tracking-tight text-foreground flex items-center gap-2.5">
+            <Calendar className="h-7 w-7 text-primary animate-pulse" />
             Calendar Hub
           </h1>
           <p className="text-sm text-muted-foreground">Manage schedules, sync accounts, and track meetings.</p>
         </div>
 
-        {/* Sync Actions toolbar */}
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -419,7 +460,7 @@ export const CalendarPage: React.FC = () => {
             onClick={handleSyncGoogle}
             disabled={isSyncing}
             className={cn(
-              'h-9 px-3 gap-1.5',
+              'h-9 px-4 gap-1.5 btn-bounce rounded-xl font-bold text-xs',
               isConnected && 'border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500/10'
             )}
             leftIcon={
@@ -442,15 +483,15 @@ export const CalendarPage: React.FC = () => {
         {/* Left Column: Calendar Perspective Panels & tabs */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex flex-wrap justify-between items-center gap-4">
-            <div className="flex gap-1 bg-secondary p-1 rounded-lg w-fit">
+            <div className="flex gap-1 bg-secondary/80 p-1 rounded-xl w-fit border border-border/60">
               {(['month', 'week', 'day', 'agenda'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
                     setActiveTab(tab)
                   }}
-                  className={`text-xs font-semibold px-4 py-1.5 rounded-md transition-colors cursor-pointer capitalize ${
-                    activeTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  className={`text-xs font-black px-4 py-1.5 rounded-lg transition-all cursor-pointer capitalize btn-bounce ${
+                    activeTab === tab ? 'bg-card text-foreground shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {tab}
@@ -459,25 +500,25 @@ export const CalendarPage: React.FC = () => {
             </div>
 
             {/* Navigation Buttons */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-foreground mr-2">{getHeaderTitle()}</span>
-              <div className="flex bg-secondary p-1 rounded-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-black text-foreground mr-1">{getHeaderTitle()}</span>
+              <div className="flex bg-secondary/80 p-1 rounded-xl border border-border/60">
                 <button
                   onClick={handlePrev}
-                  className="p-1 hover:bg-card hover:text-foreground rounded text-muted-foreground transition-all cursor-pointer"
+                  className="p-1 hover:bg-card hover:text-foreground rounded-lg text-muted-foreground transition-all cursor-pointer btn-bounce"
                   title="Previous"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   onClick={handleToday}
-                  className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider hover:bg-card hover:text-foreground rounded text-muted-foreground transition-all cursor-pointer"
+                  className="px-3 py-0.5 text-[10px] font-black uppercase tracking-wider hover:bg-card hover:text-foreground rounded-lg text-muted-foreground transition-all cursor-pointer btn-bounce"
                 >
                   Today
                 </button>
                 <button
                   onClick={handleNext}
-                  className="p-1 hover:bg-card hover:text-foreground rounded text-muted-foreground transition-all cursor-pointer"
+                  className="p-1 hover:bg-card hover:text-foreground rounded-lg text-muted-foreground transition-all cursor-pointer btn-bounce"
                   title="Next"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -486,57 +527,169 @@ export const CalendarPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="min-h-[400px]">
-            {activeTab === 'month' && renderMonthView()}
-            {activeTab === 'week' && renderWeekView()}
-            {activeTab === 'day' && renderDayView()}
-            {activeTab === 'agenda' && renderAgendaView()}
+          {/* Animated calendar layout container */}
+          <div className="relative overflow-hidden min-h-[400px]">
+            <AnimatePresence mode="wait" initial={false} custom={slideDirection}>
+              <motion.div
+                key={activeTab + currentDate.toISOString()}
+                custom={slideDirection}
+                variants={calendarVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="w-full h-full"
+              >
+                {activeTab === 'month' && renderMonthView()}
+                {activeTab === 'week' && renderWeekView()}
+                {activeTab === 'day' && renderDayView()}
+                {activeTab === 'agenda' && renderAgendaView()}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 
-        {/* Right Column: Upcoming Events List */}
+        {/* Right Column: Classified Future Tasks/Submissions & Meetings */}
         <div className="space-y-6">
-          <Card>
+          <Card className="shadow-lg border-border">
             <CardHeader className="border-b border-border/40 pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                Upcoming Meetings
+              <CardTitle className="text-sm font-black flex items-center gap-2 text-left">
+                <CalendarDays className="h-4.5 w-4.5 text-primary" />
+                Upcoming Schedule Timeline
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-3 space-y-4">
-              {!isConnected ? (
-                <div className="text-center py-6">
-                  <p className="text-xs text-muted-foreground mb-3">Link your Google Calendar to view upcoming meetings.</p>
-                  <Button size="sm" onClick={handleSyncGoogle} leftIcon={<Share2 className="h-3 w-3" />}>Link Calendar</Button>
+            <CardContent className="pt-4 space-y-6 max-h-[600px] overflow-y-auto">
+              
+              {/* Classified: Meetings & Events */}
+              <div className="space-y-3">
+                <div className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 pb-1.5 border-b border-border/40 text-left">
+                  <Video className="h-3.5 w-3.5 text-violet-500" /> Meetings & Syncs ({futureMeetings.length})
                 </div>
-              ) : meetings.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No upcoming meetings found.</p>
-              ) : (
-                meetings.map((ev) => (
-                  <div key={ev.id} className="p-3 rounded-lg border border-border bg-secondary/15 flex flex-col gap-2 text-left animate-in fade-in">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Google Event</span>
-                    <h4 className="text-xs font-bold text-foreground leading-normal">{ev.title}</h4>
-                    <span className="text-[10px] text-muted-foreground">{ev.startTime.split('T')[0]} • {ev.startTime.includes('T') ? ev.startTime.split('T')[1].substring(0, 5) : 'All Day'}</span>
-                    {ev.htmlLink && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(ev.htmlLink, '_blank')}
-                        className="text-[10px] h-7 w-fit border-border mt-1"
-                        leftIcon={<Video className="h-3 w-3" />}
-                      >
-                        Open Calendar
-                      </Button>
-                    )}
-                  </div>
-                ))
-              )}
+                {futureMeetings.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground font-semibold py-2 text-left">No upcoming meetings synced.</p>
+                ) : (
+                  futureMeetings.slice(0, 5).map((ev) => (
+                    <div
+                      key={ev.id}
+                      onClick={() => setSelectedEvent(ev)}
+                      className="p-3 rounded-xl border border-border bg-secondary/15 flex flex-col gap-1.5 text-left hover:border-violet-500/40 cursor-pointer transition-all duration-200"
+                    >
+                      <h5 className="text-xs font-bold text-foreground truncate">{ev.title}</h5>
+                      <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold">
+                        <span>{ev.date} • {ev.time}</span>
+                        {ev.link && <span className="text-violet-500 font-black">Link</span>}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Classified: Submissions & Tasks */}
+              <div className="space-y-3">
+                <div className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 pb-1.5 border-b border-border/40 text-left">
+                  <BookOpen className="h-3.5 w-3.5 text-primary" /> Tasks & Submissions ({futureTasks.length})
+                </div>
+                {futureTasks.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground font-semibold py-2 text-left">No upcoming tasks scheduled.</p>
+                ) : (
+                  futureTasks.slice(0, 5).map((ev) => (
+                    <div
+                      key={ev.id}
+                      onClick={() => setSelectedEvent(ev)}
+                      className="p-3 rounded-xl border border-border bg-secondary/15 flex flex-col gap-1.5 text-left hover:border-primary/40 cursor-pointer transition-all duration-200"
+                    >
+                      <div className="flex justify-between items-start gap-1">
+                        <h5 className="text-xs font-bold text-foreground truncate flex-grow">{ev.title}</h5>
+                        {ev.priority && (
+                          <Badge variant={ev.priority === 'urgent' || ev.priority === 'high' ? 'destructive' : 'secondary'} className="text-[8px] px-1 py-0 font-bold shrink-0">
+                            {ev.priority}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold">
+                        <span>Due: {ev.date}</span>
+                        <span className="text-primary font-black">+50 XP</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Interactive Details Modal Dialog */}
+      <AnimatePresence>
+        {selectedEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedEvent(null)}
+              className="absolute inset-0 bg-background/80 backdrop-blur-md"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="relative w-full max-w-sm rounded-2xl border border-primary/20 bg-card p-6 text-left shadow-2xl backdrop-blur-lg z-10 space-y-4"
+            >
+              <div className="flex justify-between items-center">
+                <Badge variant={selectedEvent.type === 'meeting' ? 'primary' : 'outline'} className="text-[9px] font-black uppercase tracking-wider">
+                  {selectedEvent.type}
+                </Badge>
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="p-1 rounded-full hover:bg-secondary text-muted-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="font-display font-black text-base text-foreground leading-snug">
+                  {selectedEvent.title}
+                </h3>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-semibold">
+                  <Clock className="h-3.5 w-3.5" />
+                  {selectedEvent.date} • {selectedEvent.time}
+                </p>
+              </div>
+
+              {selectedEvent.link && (
+                <Button
+                  variant="primary"
+                  onClick={() => window.open(selectedEvent.link, '_blank')}
+                  className="w-full btn-bounce rounded-xl"
+                  leftIcon={<Video className="h-4 w-4" />}
+                >
+                  Join Meeting Room
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                onClick={() => setSelectedEvent(null)}
+                className="w-full btn-bounce rounded-xl border-border"
+              >
+                Close Details
+              </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
+
+const X = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+  </svg>
+)
 
 export default CalendarPage

@@ -4,16 +4,13 @@ import {
   CheckSquare,
   Clock,
   Sparkles,
-  Calendar,
   Trophy,
-  Activity,
   Play,
   Pause,
   RotateCcw,
   Zap,
   TrendingUp,
   CircleDot,
-  AlertCircle,
   Flame,
   Award,
 } from 'lucide-react'
@@ -33,8 +30,9 @@ import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { useToastStore } from '@/store/useToastStore'
 import { useTaskStore } from '@/features/tasks/store/useTaskStore'
+import apiClient from '@/services/apiClient'
 
-// Dummy Data
+// Daily stats
 const chartData = [
   { day: 'Mon', score: 65 },
   { day: 'Tue', score: 75 },
@@ -57,6 +55,7 @@ export const DashboardHome: React.FC = () => {
   // Focus Timer Pomodoro State
   const [timerTime, setTimerTime] = useState(25 * 60)
   const [timerActive, setTimerActive] = useState(false)
+  const [emailStatus, setEmailStatus] = useState<any>(null)
 
   useEffect(() => {
     let interval: any = null
@@ -91,6 +90,9 @@ export const DashboardHome: React.FC = () => {
 
   useEffect(() => {
     fetchTasks()
+    apiClient.get('/gmail/status/')
+      .then((res) => setEmailStatus(res.data))
+      .catch(() => {})
   }, [fetchTasks])
 
   const todayStr = new Date().toISOString().split('T')[0]
@@ -131,31 +133,49 @@ export const DashboardHome: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
-      {/* 1. Top Overview Row */}
+      {/* 1. Top Greeting Card with Duolingo Banner style */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="text-left space-y-1">
+          <h2 className="font-display font-black text-2xl tracking-tight text-foreground flex items-center gap-2">
+            Welcome back! <motion.span animate={{ rotate: [0, 15, -15, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="inline-block">👋</motion.span>
+          </h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Your daily planner is synced. You have {totalTodayTasks - completedTodayTasks} tasks remaining for today.
+          </p>
+        </div>
+        {emailStatus?.connected && (
+          <div className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 shrink-0 self-start sm:self-auto">
+            <CircleDot className="h-3.5 w-3.5 fill-current animate-pulse" />
+            <span>Gmail Auto-Sync Connected</span>
+          </div>
+        )}
+      </div>
+
+      {/* 2. Top Overview Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Productivity Score */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Productivity Score</span>
+        <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-primary/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-left">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Productivity Score</span>
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-display">{productivityScore}%</div>
+          <CardContent className="text-left">
+            <div className="text-3xl font-black font-display text-primary">{productivityScore}%</div>
             <p className="text-[10px] text-muted-foreground mt-1">
               Completed {completedTasks} of {totalTasks} total tasks
             </p>
-            <Progress value={productivityScore} className="mt-3 bg-secondary" color="bg-primary" />
+            <Progress value={productivityScore} className="mt-3 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
           </CardContent>
         </Card>
 
         {/* Goal Progress */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Today's Progress</span>
+        <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-primary/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-left">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Today's Progress</span>
             <CircleDot className="h-4 w-4 text-emerald-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-display">
+          <CardContent className="text-left">
+            <div className="text-3xl font-black font-display text-emerald-500">
               {completedTodayTasks} / {totalTodayTasks}
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">Today's tasks completed</p>
@@ -164,14 +184,14 @@ export const DashboardHome: React.FC = () => {
         </Card>
 
         {/* Habits / Daily Streak */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Daily Streak</span>
+        <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-primary/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-left">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Daily Streak</span>
             <Flame className="h-4 w-4 text-amber-500 fill-amber-500/20" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-display">7 Days</div>
-            <p className="text-[10px] text-amber-500 font-medium mt-1">Keep it up! Active habit streak</p>
+          <CardContent className="text-left">
+            <div className="text-3xl font-black font-display text-amber-500">7 Days</div>
+            <p className="text-[10px] text-amber-500 font-bold mt-1">Keep it up! Active habit streak</p>
             <div className="flex gap-1 mt-3">
               {[1, 2, 3, 4, 5, 6, 7].map((day) => (
                 <div key={day} className="h-2 w-full rounded bg-amber-500" />
@@ -181,26 +201,26 @@ export const DashboardHome: React.FC = () => {
         </Card>
 
         {/* User Level & XP */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">User Level</span>
-            <Award className="h-4 w-4 text-primary" />
+        <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-primary/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-left">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">User Level</span>
+            <Award className="h-4 w-4 text-primary animate-pulse" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-display">Lv. 14</div>
+          <CardContent className="text-left">
+            <div className="text-3xl font-black font-display text-primary">Lv. 14</div>
             <p className="text-[10px] text-muted-foreground mt-1">1,850 / 2,000 XP to Level 15</p>
-            <Progress value={92} className="mt-3 bg-secondary" color="bg-primary" />
+            <Progress value={92} className="mt-3 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
           </CardContent>
         </Card>
       </div>
 
-      {/* 2. Main Grid Layout */}
+      {/* 3. Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Tasks, Deadlines, Focus Timer */}
         <div className="lg:col-span-2 space-y-6">
           {/* Today's Tasks */}
-          <Card>
-            <CardHeader className="border-b border-border/40 pb-4">
+          <Card className="border-border">
+            <CardHeader className="border-b border-border/40 pb-4 text-left">
               <CardTitle className="flex items-center gap-2">
                 <CheckSquare className="h-5 w-5 text-primary" />
                 Today's Tasks
@@ -214,14 +234,15 @@ export const DashboardHome: React.FC = () => {
                   todaysTasks.map((task) => {
                     const isCompleted = task.status === 'completed'
                     return (
-                      <div
+                      <motion.div
+                        whileHover={{ scale: 1.01 }}
                         key={task.id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/40 hover:bg-secondary/20 transition-all cursor-pointer"
+                        className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:bg-secondary/20 transition-all cursor-pointer text-left"
                         onClick={() => toggleTask(task.id)}
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`h-5 w-5 rounded border flex items-center justify-center transition-colors ${
+                            className={`h-5 w-5 rounded-lg border flex items-center justify-center transition-colors ${
                               isCompleted
                                 ? 'bg-primary border-primary text-primary-foreground'
                                 : 'border-border'
@@ -229,14 +250,14 @@ export const DashboardHome: React.FC = () => {
                           >
                             {isCompleted && '✓'}
                           </div>
-                          <span className={`text-sm font-medium ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                          <span className={`text-sm font-semibold ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                             {task.title}
                           </span>
                         </div>
                         <Badge variant={task.priority === 'urgent' || task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'warning' : 'secondary'}>
                           {task.priority}
                         </Badge>
-                      </div>
+                      </motion.div>
                     )
                   })
                 )}
@@ -246,26 +267,36 @@ export const DashboardHome: React.FC = () => {
 
           {/* Productivity Stats Chart */}
           <Card>
-            <CardHeader>
+            <CardHeader className="text-left">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
                 Productivity Trends
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-72">
+            <CardContent className="h-72 pt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="scoreColor" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-primary, hsl(var(--primary)))" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="var(--color-primary, hsl(var(--primary)))" stopOpacity={0} />
+                      <stop offset="5%" stopColor="hsl(263, 80%, 60%)" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="hsl(263, 80%, 60%)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} />
-                  <RechartsTooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                  <Area type="monotone" dataKey="score" stroke="var(--color-primary, hsl(var(--primary)))" fillOpacity={1} fill="url(#scoreColor)" strokeWidth={2} />
+                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="color-mix(in srgb, hsl(var(--border)) 70%, transparent)" />
+                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={10} fontWeight="600" tickLine={false} axisLine={false} dy={8} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} fontWeight="600" tickLine={false} axisLine={false} dx={-8} />
+                  <RechartsTooltip
+                    contentStyle={{
+                      background: 'color-mix(in srgb, hsl(var(--card)) 85%, transparent)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid color-mix(in srgb, hsl(var(--border)) 80%, transparent)',
+                      borderRadius: '16px',
+                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
+                      fontSize: '11px',
+                      fontWeight: '700'
+                    }}
+                  />
+                  <Area type="monotone" dataKey="score" stroke="hsl(263, 80%, 60%)" fillOpacity={1} fill="url(#scoreColor)" strokeWidth={3} dot={{ stroke: 'hsl(263, 80%, 60%)', strokeWidth: 2, r: 4, fill: 'hsl(var(--card))' }} activeDot={{ r: 6, strokeWidth: 0 }} />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
@@ -275,24 +306,24 @@ export const DashboardHome: React.FC = () => {
         {/* Right Column: Pomodoro, AI Coach suggestions, Leaderboard */}
         <div className="space-y-6">
           {/* Pomodoro Focus Timer */}
-          <Card className="text-center relative overflow-hidden bg-primary/5 border-primary/20">
+          <Card className="text-center relative overflow-hidden bg-primary/5 border-primary/20 rounded-2xl">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
-            <CardHeader>
+            <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
                 Focus Session
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="text-5xl font-black font-display tracking-tight text-foreground">
+              <div className="text-5xl font-black font-display tracking-tight text-foreground select-none">
                 {formatTime(timerTime)}
               </div>
               <div className="flex justify-center gap-3">
-                <Button variant="primary" onClick={toggleTimer} className="h-10 px-6 font-semibold shadow">
+                <Button variant="primary" onClick={toggleTimer} className="h-10 px-6 font-semibold shadow-lg shadow-primary/20 btn-bounce">
                   {timerActive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
                   {timerActive ? 'Pause' : 'Start'}
                 </Button>
-                <Button variant="outline" onClick={resetTimer} className="h-10 w-10 p-0 border border-border">
+                <Button variant="outline" onClick={resetTimer} className="h-10 w-10 p-0 border border-border btn-bounce">
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </div>
@@ -301,21 +332,21 @@ export const DashboardHome: React.FC = () => {
 
           {/* AI Suggestions Panel */}
           <Card>
-            <CardHeader className="border-b border-border/40 pb-4">
+            <CardHeader className="border-b border-border/40 pb-4 text-left">
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary animate-pulse" />
                 AI Assistant Recommendations
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              <div className="p-3 rounded-lg border border-primary/10 bg-primary/5 text-left space-y-2">
+              <div className="p-4 rounded-xl border border-primary/10 bg-primary/5 text-left space-y-2">
                 <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider">
                   <Zap className="h-3.5 w-3.5 fill-current" /> Schedule Urgency Alert
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  You have <span className="font-semibold text-foreground">Complete pitch deck draft</span> due today at 5:00 PM. I suggest starting a Pomodoro session now to avoid a last-minute rush.
+                  You have tasks pending for today. I suggest starting a Pomodoro session now to check off items early and keep your streak!
                 </p>
-                <Button size="sm" variant="primary" onClick={() => { setTimerTime(25 * 60); setTimerActive(true); }} className="text-xs h-7 px-3">
+                <Button size="sm" variant="primary" onClick={() => { setTimerTime(25 * 60); setTimerActive(true); }} className="text-xs h-7 px-3 btn-bounce">
                   Start Session
                 </Button>
               </div>
@@ -324,21 +355,21 @@ export const DashboardHome: React.FC = () => {
 
           {/* Leaderboard & XP */}
           <Card>
-            <CardHeader className="border-b border-border/40 pb-4">
+            <CardHeader className="border-b border-border/40 pb-4 text-left">
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-amber-500" />
                 Leaderboard
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 space-y-3">
+            <CardContent className="pt-4 space-y-3 text-left">
               {dummyLeaderboard.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/20">
+                <div key={user.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-secondary/20 transition-all">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-black text-muted-foreground w-4">{user.rank}.</span>
                     <Avatar fallback={user.avatar} size="sm" />
-                    <span className="text-xs font-semibold">{user.name}</span>
+                    <span className="text-xs font-bold">{user.name}</span>
                   </div>
-                  <Badge variant={user.rank === 1 ? 'primary' : 'secondary'} className="text-[10px]">
+                  <Badge variant={user.rank === 1 ? 'primary' : 'secondary'} className="text-[10px] font-black">
                     {user.xp} XP
                   </Badge>
                 </div>

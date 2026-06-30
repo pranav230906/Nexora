@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/v1/gamification/', include('apps.gamification.urls', namespace='gamification')),
     path('api/v1/analytics/', include('apps.analytics.urls', namespace='analytics')),
     path('api/v1/sync/', include('apps.sync.urls', namespace='sync')),
+    path('api/v1/action-engine/', include('apps.ai_action_engine.urls', namespace='ai_action_engine')),
 ]

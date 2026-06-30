@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'apps.gamification',
     'apps.analytics',
     'apps.sync',
+    'apps.ai_action_engine',
 ]
 
 MIDDLEWARE = [

@@ -86,9 +86,21 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # Database Setup
-DATABASES = {
-    'default': env.db('DATABASE_URL', default='postgres://postgres:postgres@localhost:5432/lifesaver')
-}
+import sys
+if 'test' in sys.argv:
+    # Clear OpenAI API Key to avoid real slow API calls and quota errors during test suites
+    if 'OPENAI_API_KEY' in os.environ:
+        del os.environ['OPENAI_API_KEY']
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': env.db('DATABASE_URL', default='postgres://postgres:postgres@localhost:5432/lifesaver')
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

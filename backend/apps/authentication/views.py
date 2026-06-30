@@ -195,9 +195,10 @@ class GoogleCallbackView(views.APIView):
     permission_classes = (permissions.AllowAny,)
 
     def get(self, request):
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
         code = request.GET.get('code')
         if not code:
-            return redirect("http://localhost:5173/login?error=no_code")
+            return redirect(f"{frontend_url}/login?error=no_code")
 
         token_url = "https://oauth2.googleapis.com/token"
         payload = {
@@ -266,9 +267,9 @@ class GoogleCallbackView(views.APIView):
             access = tokens['access']
             refresh = tokens['refresh']
 
-            return redirect(f"http://localhost:5173/login#access_token={access}&refresh_token={refresh}")
+            return redirect(f"{frontend_url}/login#access_token={access}&refresh_token={refresh}")
         except Exception as e:
-            return redirect(f"http://localhost:5173/login?error={str(e)}")
+            return redirect(f"{frontend_url}/login?error={str(e)}")
 
 
 class SendOTPView(views.APIView):

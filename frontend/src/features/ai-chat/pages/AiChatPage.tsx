@@ -126,9 +126,9 @@ export const AiChatPage: React.FC = () => {
     try {
       setLoadingHistory(true)
       const res = await apiClient.get<any[]>(`/chatbot/session/${sessionId}/history/`)
-      const formatted = res.data.map((msg) => ({
+      const formatted: ChatMessage[] = res.data.map((msg) => ({
         id: String(msg.id),
-        sender: msg.sender.toLowerCase() === 'user' ? 'user' : 'ai',
+        sender: (msg.sender.toLowerCase() === 'user' ? 'user' : 'ai') as 'user' | 'ai',
         text: msg.content,
         toolCalls: msg.tool_calls ? Object.keys(msg.tool_calls) : [],
       }))

@@ -199,12 +199,12 @@ export const CalendarPage: React.FC = () => {
       opacity: 1,
       x: 0,
       y: 0,
-      transition: { duration: 0.25, ease: 'easeOut' },
+      transition: { duration: 0.25, ease: 'easeOut' as const },
     },
     exit: (direction: number) => ({
       opacity: 0,
       x: direction > 0 ? -40 : direction < 0 ? 40 : 0,
-      transition: { duration: 0.15, ease: 'easeIn' },
+      transition: { duration: 0.15, ease: 'easeIn' as const },
     }),
   }
 

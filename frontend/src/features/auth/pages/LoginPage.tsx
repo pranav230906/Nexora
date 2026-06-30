@@ -101,7 +101,9 @@ export const LoginPage: React.FC = () => {
 
   const handleGoogleLogin = () => {
     const clientId = '1023743274517-n5q4hviq6h0qdhh1nf3l7i1tmiv9h7tb.apps.googleusercontent.com'
-    const redirectUri = 'http://localhost:8000/api/v1/auth/google/callback'
+    const redirectUri = window.location.origin.includes('localhost')
+      ? 'http://localhost:8000/api/v1/auth/google/callback'
+      : 'https://backend-869605153366.us-central1.run.app/api/v1/auth/google/callback'
     const scope = 'openid profile email'
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`
   }

@@ -1,0 +1,22 @@
+# Local active environment variables
+.env
+.env.*
+
+# Secrets folder containing private keys
+secrets/
+
+# Django database
+db.sqlite3
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Local Python virtual environment
+venv/
+.venv/
+env/
+
+# Uploaded mail attachments and local vector store cache
+attachments/
+vector_store/

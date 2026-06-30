@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { useToastStore } from '@/store/useToastStore'
 import { useTaskStore } from '@/features/tasks/store/useTaskStore'
+import { useGamificationStore } from '@/store/useGamificationStore'
 import apiClient from '@/services/apiClient'
 
 // Daily stats
@@ -41,12 +42,6 @@ const chartData = [
   { day: 'Fri', score: 90 },
   { day: 'Sat', score: 95 },
   { day: 'Sun', score: 88 },
-]
-
-const dummyLeaderboard = [
-  { id: '1', name: 'Pranav S', xp: 2450, rank: 1, avatar: 'P' },
-  { id: '2', name: 'Sarah Miller', xp: 2200, rank: 2, avatar: 'SM' },
-  { id: '3', name: 'Alexander T', xp: 1980, rank: 3, avatar: 'AT' },
 ]
 
 export const DashboardHome: React.FC = () => {
@@ -87,13 +82,16 @@ export const DashboardHome: React.FC = () => {
   }
 
   const { tasks, fetchTasks, updateTask } = useTaskStore()
+  const { profile, leaderboard, fetchProfile, fetchLeaderboard } = useGamificationStore()
 
   useEffect(() => {
     fetchTasks()
+    fetchProfile()
+    fetchLeaderboard()
     apiClient.get('/gmail/status/')
       .then((res) => setEmailStatus(res.data))
       .catch(() => {})
-  }, [fetchTasks])
+  }, [fetchTasks, fetchProfile, fetchLeaderboard])
 
   const todayStr = new Date().toISOString().split('T')[0]
   const todaysTasks = tasks.filter((task) => {
@@ -190,28 +188,43 @@ export const DashboardHome: React.FC = () => {
             <Flame className="h-4 w-4 text-amber-500 fill-amber-500/20" />
           </CardHeader>
           <CardContent className="text-left">
-            <div className="text-3xl font-black font-display text-amber-500">7 Days</div>
+            <div className="text-3xl font-black font-display text-amber-500">{profile?.streak_days || 0} Days</div>
             <p className="text-[10px] text-amber-500 font-bold mt-1">Keep it up! Active habit streak</p>
             <div className="flex gap-1 mt-3">
-              {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-                <div key={day} className="h-2 w-full rounded bg-amber-500" />
+              {Array.from({ length: Math.min(7, profile?.streak_days || 1) }).map((_, index) => (
+                <div key={index} className="h-2 w-full rounded bg-amber-500" />
+              ))}
+              {Array.from({ length: 7 - Math.min(7, profile?.streak_days || 1) }).map((_, index) => (
+                <div key={index} className="h-2 w-full rounded bg-secondary/55" />
               ))}
             </div>
           </CardContent>
         </Card>
 
         {/* User Level & XP */}
-        <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-left">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">User Level</span>
-            <Award className="h-4 w-4 text-primary animate-pulse" />
-          </CardHeader>
-          <CardContent className="text-left">
-            <div className="text-3xl font-black font-display text-primary">Lv. 14</div>
-            <p className="text-[10px] text-muted-foreground mt-1">1,850 / 2,000 XP to Level 15</p>
-            <Progress value={92} className="mt-3 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
-          </CardContent>
-        </Card>
+        {(() => {
+          const level = profile?.level || 1
+          const xp = profile?.xp || 0
+          const minXp = 100 * Math.pow(level - 1, 2)
+          const maxXp = 100 * Math.pow(level, 2)
+          const progressVal = xp - minXp
+          const totalVal = maxXp - minXp
+          const progressPercent = totalVal > 0 ? Math.round((progressVal / totalVal) * 100) : 0
+          
+          return (
+            <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-primary/10">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-left">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">User Level</span>
+                <Award className="h-4 w-4 text-primary animate-pulse" />
+              </CardHeader>
+              <CardContent className="text-left">
+                <div className="text-3xl font-black font-display text-primary">Lv. {level}</div>
+                <p className="text-[10px] text-muted-foreground mt-1">{xp} / {maxXp} XP to Level {level + 1}</p>
+                <Progress value={progressPercent} className="mt-3 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
+              </CardContent>
+            </Card>
+          )
+        })()}
       </div>
 
       {/* 3. Main Grid Layout */}
@@ -362,18 +375,24 @@ export const DashboardHome: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-3 text-left">
-              {dummyLeaderboard.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-secondary/20 transition-all">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-black text-muted-foreground w-4">{user.rank}.</span>
-                    <Avatar fallback={user.avatar} size="sm" />
-                    <span className="text-xs font-bold">{user.name}</span>
+              {leaderboard.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">No leaderboard rankings found.</p>
+              ) : (
+                leaderboard.slice(0, 5).map((user, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-secondary/20 transition-all">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-black text-muted-foreground w-4">{user.rank}.</span>
+                      <Avatar fallback={user.username ? user.username.slice(0,2).toUpperCase() : user.email.slice(0,2).toUpperCase()} size="sm" />
+                      <span className="text-xs font-bold truncate max-w-[100px]" title={user.username || user.email}>
+                        {user.username || user.email.split('@')[0]}
+                      </span>
+                    </div>
+                    <Badge variant={user.rank === 1 ? 'primary' : 'secondary'} className="text-[10px] font-black">
+                      {user.xp} XP
+                    </Badge>
                   </div>
-                  <Badge variant={user.rank === 1 ? 'primary' : 'secondary'} className="text-[10px] font-black">
-                    {user.xp} XP
-                  </Badge>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>

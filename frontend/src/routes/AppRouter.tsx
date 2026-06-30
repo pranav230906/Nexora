@@ -20,6 +20,7 @@ import AnalyticsPage from '@/features/analytics/pages/AnalyticsPage'
 import AiChatPage from '@/features/ai-chat/pages/AiChatPage'
 import NotificationCenterPage from '@/features/notifications/pages/NotificationCenterPage'
 import LandingPage from '@/features/landing/pages/LandingPage'
+import { PrivacyPage, TermsPage } from '@/features/landing/pages/LegalPages'
 
 import { useOffline } from '@/context/OfflineContext'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
@@ -321,6 +322,14 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <RootRoute />,
+  },
+  {
+    path: '/privacy',
+    element: <PrivacyPage />,
+  },
+  {
+    path: '/terms',
+    element: <TermsPage />,
   },
   {
     path: '/dashboard',

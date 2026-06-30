@@ -33,10 +33,12 @@ import { Dropdown } from '@/components/ui/Dropdown'
 import { cn } from '@/utils/cn'
 import apiClient from '@/services/apiClient'
 import { Progress } from '@/components/ui/Progress'
+import { useGamificationStore } from '@/store/useGamificationStore'
 
 export const DashboardLayout: React.FC = () => {
   const { theme, setTheme } = useTheme()
   const { user, setUser, logout } = useAppStore()
+  const { profile, fetchProfile } = useGamificationStore()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -45,18 +47,21 @@ export const DashboardLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   React.useEffect(() => {
-    if (!user && localStorage.getItem('auth_token')) {
-      apiClient.get('/auth/profile/')
-        .then((response) => {
-          setUser(response.data)
-        })
-        .catch((err) => {
-          console.error("Failed to load user profile:", err)
-          logout()
-          navigate('/login')
-        })
+    if (localStorage.getItem('auth_token')) {
+      if (!user) {
+        apiClient.get('/auth/profile/')
+          .then((response) => {
+            setUser(response.data)
+          })
+          .catch((err) => {
+            console.error("Failed to load user profile:", err)
+            logout()
+            navigate('/login')
+          })
+      }
+      fetchProfile()
     }
-  }, [user, setUser, logout, navigate])
+  }, [user, setUser, logout, navigate, fetchProfile])
 
   const handleLogout = () => {
     logout()
@@ -258,21 +263,34 @@ export const DashboardLayout: React.FC = () => {
 
           {/* Right Header Gamified telemetry dashboard controls */}
           <div className="flex items-center gap-4">
-            {/* Daily Streak Fire Counter */}
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-all font-display font-black text-xs">
-              <Flame className="h-4 w-4 fill-amber-500/20 animate-bounce" />
-              <span>7 DAYS</span>
-            </div>
+            {(() => {
+              const level = profile?.level || 1
+              const xp = profile?.xp || 0
+              const minXp = 100 * Math.pow(level - 1, 2)
+              const maxXp = 100 * Math.pow(level, 2)
+              const progressVal = xp - minXp
+              const totalVal = maxXp - minXp
+              const progressPercent = totalVal > 0 ? Math.round((progressVal / totalVal) * 100) : 0
+              
+              return (
+                <>
+                  {/* Daily Streak Fire Counter */}
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-all font-display font-black text-xs">
+                    <Flame className="h-4 w-4 fill-amber-500/20 animate-bounce" />
+                    <span>{profile?.streak_days || 0} DAYS</span>
+                  </div>
 
-            {/* XP Level Telemetry status */}
-            <div className="hidden lg:flex flex-col w-32 space-y-1">
-              <div className="flex justify-between items-center text-[10px] font-bold">
-                <span className="text-primary flex items-center gap-1"><Award className="h-3 w-3" /> LV. 14</span>
-                <span className="text-muted-foreground">1,850/2,000 XP</span>
-              </div>
-              <Progress value={92} className="h-1.5 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
-            </div>
-
+                  {/* XP Level Telemetry status */}
+                  <div className="hidden lg:flex flex-col w-32 space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-primary flex items-center gap-1"><Award className="h-3 w-3" /> LV. {level}</span>
+                      <span className="text-muted-foreground">{xp}/{maxXp} XP</span>
+                    </div>
+                    <Progress value={progressPercent} className="h-1.5 bg-secondary" color="bg-gradient-to-r from-primary to-violet-500" />
+                  </div>
+                </>
+              )
+            })()}
             <QuickActions />
             <NotificationPanel />
 

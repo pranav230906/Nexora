@@ -56,8 +56,6 @@ export const TasksPage: React.FC = () => {
 
   const tabOptions: TabOption[] = [
     { id: 'list', label: 'List', icon: <ListIcon className="h-4 w-4" /> },
-    { id: 'kanban', label: 'Kanban', icon: <KanbanIcon className="h-4 w-4" /> },
-    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="h-4 w-4" /> },
     { id: 'timeline', label: 'Timeline', icon: <TimelineIcon className="h-4 w-4" /> },
   ]
 

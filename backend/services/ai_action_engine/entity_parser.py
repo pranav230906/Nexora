@@ -53,15 +53,36 @@ def parse_entities(text: str) -> Dict:
 
         result = json.loads(response.choices[0].message.content.strip())
         
-        # Verify date format is parseable or null
+        # Verify date format is parseable or fallback to tomorrow
         due = result.get('due_date')
+        parsed_dt = None
         if due:
+            due_clean = due.strip()
+            if len(due_clean) == 10: # YYYY-MM-DD
+                due_clean += "T12:00:00Z"
+            if ' ' in due_clean and 'T' not in due_clean:
+                due_clean = due_clean.replace(' ', 'T')
             try:
-                # Validate by parsing
-                datetime.fromisoformat(due.replace('Z', '+00:00'))
+                parsed_dt = datetime.fromisoformat(due_clean.replace('Z', '+00:00'))
             except ValueError:
-                result['due_date'] = None
+                from django.utils.dateparse import parse_datetime
+                parsed_dt = parse_datetime(due_clean)
 
+        if not parsed_dt:
+            # Smart parsing of text for basic date words
+            text_lower = text.lower()
+            tomorrow = timezone.now() + timezone.timedelta(days=1)
+            if 'today' in text_lower:
+                parsed_dt = timezone.now()
+            elif 'tomorrow' in text_lower:
+                parsed_dt = tomorrow
+            elif 'next week' in text_lower:
+                parsed_dt = timezone.now() + timezone.timedelta(days=7)
+            else:
+                parsed_dt = tomorrow
+
+        # Format as ISO string ending with Z
+        result['due_date'] = parsed_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         return result
 
     except Exception as e:
@@ -107,9 +128,21 @@ def _fallback_entities(text: str) -> Dict:
         elif 'month' in text_lower:
             recurrence_pattern = 'MONTHLY'
 
+    # Smart parsing of text for basic date words
+    tomorrow = timezone.now() + timezone.timedelta(days=1)
+    if 'today' in text_lower:
+        parsed_dt = timezone.now()
+    elif 'tomorrow' in text_lower:
+        parsed_dt = tomorrow
+    elif 'next week' in text_lower:
+        parsed_dt = timezone.now() + timezone.timedelta(days=7)
+    else:
+        parsed_dt = tomorrow
+    due_date_str = parsed_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
     return {
         "title": title,
-        "due_date": None,
+        "due_date": due_date_str,
         "estimated_time": estimated_time,
         "priority": priority,
         "category": "Work",

@@ -199,10 +199,22 @@ export const QuickActions: React.FC = () => {
         size="sm"
         onClick={handleOptimizeWorkload}
         disabled={isOptimizing}
-        className="h-9 px-3 gap-1.5 border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary"
-        leftIcon={isOptimizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 fill-current" />}
+        className="h-9 px-3 gap-1.5 border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary btn-bounce"
+        leftIcon={isOptimizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 fill-current animate-pulse" />}
       >
         Optimize Workload
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          setCreationMode('ai')
+          setIsOpen(true)
+        }}
+        className="h-9 px-3 gap-1.5 border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 btn-bounce"
+        leftIcon={<Brain className="h-3.5 w-3.5" />}
+      >
+        AI Task Wizard
       </Button>
       <Button
         variant="primary"
@@ -211,7 +223,7 @@ export const QuickActions: React.FC = () => {
           setCreationMode('manual')
           setIsOpen(true)
         }}
-        className="h-9 px-3 gap-1.5"
+        className="h-9 px-3 gap-1.5 btn-bounce"
         leftIcon={<Plus className="h-3.5 w-3.5" />}
       >
         New Task

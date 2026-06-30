@@ -1,0 +1,11 @@
+# Exclude python virtual environments and cache files from upload
+venv/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+.env
+.gitignore
+.gcloudignore

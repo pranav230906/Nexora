@@ -388,8 +388,8 @@ export const LandingPage: React.FC = () => {
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li><Link to="#" className="hover:text-foreground">Documentation</Link></li>
               <li><Link to="#" className="hover:text-foreground">API Status</Link></li>
-              <li><Link to="#" className="hover:text-foreground">Privacy Policy</Link></li>
-              <li><Link to="#" className="hover:text-foreground">Terms of Service</Link></li>
+              <li><Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="hover:text-foreground">Terms of Service</Link></li>
             </ul>
           </div>
 
@@ -413,8 +413,8 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-6xl mx-auto px-6 border-t border-white/[0.06] mt-12 pt-6 text-center text-xs text-muted-foreground flex flex-col sm:flex-row justify-between items-center gap-4">
           <p>&copy; {new Date().getFullYear()} Nexora. All rights reserved.</p>
           <div className="flex gap-4">
-            <Link to="#" className="hover:underline">Privacy Policy</Link>
-            <Link to="#" className="hover:underline">Terms of Service</Link>
+            <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+            <Link to="/terms" className="hover:underline">Terms of Service</Link>
           </div>
         </div>
       </footer>

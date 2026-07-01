@@ -48,6 +48,7 @@ export const AnalyticsPage: React.FC = () => {
   // Manual Trigger Range State
   const [reportType, setReportType] = useState<'WEEKLY' | 'MONTHLY'>('WEEKLY')
   const [startDate, setStartDate] = useState('')
+  const [activePieIndex, setActivePieIndex] = useState<number | null>(null)
   const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
@@ -238,6 +239,41 @@ export const AnalyticsPage: React.FC = () => {
             <div className="w-full h-44 relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                  <defs>
+                    <filter id="shadow3d" x="-20%" y="-20%" width="145%" height="145%">
+                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.4" />
+                    </filter>
+                    <linearGradient id="pieGrad-0" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#c7d2fe" />
+                      <stop offset="40%" stopColor="#6366f1" />
+                      <stop offset="100%" stopColor="#312e81" />
+                    </linearGradient>
+                    <linearGradient id="pieGrad-1" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#a7f3d0" />
+                      <stop offset="40%" stopColor="#10b981" />
+                      <stop offset="100%" stopColor="#064e3b" />
+                    </linearGradient>
+                    <linearGradient id="pieGrad-2" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#fde68a" />
+                      <stop offset="40%" stopColor="#f59e0b" />
+                      <stop offset="100%" stopColor="#78350f" />
+                    </linearGradient>
+                    <linearGradient id="pieGrad-3" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#fecaca" />
+                      <stop offset="40%" stopColor="#ef4444" />
+                      <stop offset="100%" stopColor="#7f1d1d" />
+                    </linearGradient>
+                    <linearGradient id="pieGrad-4" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#ddd6fe" />
+                      <stop offset="40%" stopColor="#8b5cf6" />
+                      <stop offset="100%" stopColor="#4c1d95" />
+                    </linearGradient>
+                    <linearGradient id="pieGrad-5" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#fbcfe8" />
+                      <stop offset="40%" stopColor="#ec4899" />
+                      <stop offset="100%" stopColor="#831843" />
+                    </linearGradient>
+                  </defs>
                   <Pie
                     data={timeDistData}
                     cx="50%"
@@ -247,9 +283,17 @@ export const AnalyticsPage: React.FC = () => {
                     paddingAngle={4}
                     dataKey="value"
                     nameKey="label"
+                    stroke="rgba(255, 255, 255, 0.3)"
+                    strokeWidth={1.5}
+                    onMouseEnter={(_, index) => setActivePieIndex(index)}
+                    onMouseLeave={() => setActivePieIndex(null)}
                   >
                     {timeDistData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} style={{ filter: 'drop-shadow(0px 4px 10px rgba(0,0,0,0.05))' }} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={`url(#pieGrad-${index % COLORS.length})`} 
+                        style={{ filter: 'url(#shadow3d)', outline: 'none', transition: 'all 0.2s ease-in-out' }} 
+                      />
                     ))}
                   </Pie>
                   <RechartsTooltip
@@ -267,9 +311,11 @@ export const AnalyticsPage: React.FC = () => {
               
               {/* Donut Center text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</span>
-                <span className="text-xl font-black font-display text-foreground leading-none">
-                  {timeDistData.reduce((acc, curr) => acc + curr.value, 0)}
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all duration-200">
+                  {activePieIndex !== null ? timeDistData[activePieIndex].label : 'Total Tasks'}
+                </span>
+                <span className="text-2xl font-black font-display text-foreground leading-none mt-1 transition-all duration-200">
+                  {activePieIndex !== null ? timeDistData[activePieIndex].value : timeDistData.reduce((acc, curr) => acc + curr.value, 0)}
                 </span>
               </div>
             </div>

@@ -69,12 +69,12 @@ const scrollExperiences = [...userExperiences, ...userExperiences, ...userExperi
 
 export const LandingPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[#030303] text-foreground overflow-hidden relative selection:bg-primary selection:text-primary-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-hidden relative selection:bg-primary selection:text-primary-foreground">
       {/* CSS Dotted Grid Background */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.06]"
+        className="absolute inset-0 pointer-events-none opacity-[0.08] text-foreground"
         style={{
-          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
           backgroundSize: '24px 24px'
         }}
       />
@@ -84,7 +84,7 @@ export const LandingPage: React.FC = () => {
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Navigation Header */}
-      <header className="border-b border-white/[0.08] backdrop-blur-md bg-[#030303]/80 sticky top-0 z-50 h-[72px]">
+      <header className="border-b border-border/40 backdrop-blur-md bg-background/80 sticky top-0 z-50 h-[72px]">
         <div className="max-w-6xl mx-auto px-6 h-full flex justify-between items-center">
           {/* Stylized Neon Logo */}
           <div className="flex items-center gap-3">
@@ -176,10 +176,10 @@ export const LandingPage: React.FC = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: 'spring', damping: 25, delay: 0.4 }}
-          className="relative rounded-2xl border border-white/[0.08] bg-zinc-950/60 backdrop-blur-md shadow-2xl p-6 text-left"
+          className="relative rounded-2xl border border-border/40 bg-card/60 backdrop-blur-md shadow-2xl p-6 text-left"
         >
           {/* Mac window controls */}
-          <div className="flex gap-1.5 mb-6 border-b border-white/[0.05] pb-4">
+          <div className="flex gap-1.5 mb-6 border-b border-border/40 pb-4">
             <span className="w-3 h-3 rounded-full bg-red-500/80" />
             <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
             <span className="w-3 h-3 rounded-full bg-green-500/80" />
@@ -199,7 +199,7 @@ export const LandingPage: React.FC = () => {
                   { title: 'Synchronize IndexedDB offline queue', priority: 'urgent', checked: false },
                   { title: 'Validate FCM push certificate PEM payload', priority: 'medium', checked: false }
                 ].map((task, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.05] bg-white/[0.01]">
+                  <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-border/30 bg-secondary/30">
                     <CheckCircle className={`h-4 w-4 shrink-0 ${task.checked ? 'text-primary' : 'text-muted-foreground'}`} />
                     <span className={`text-xs flex-1 ${task.checked ? 'line-through text-muted-foreground' : 'text-foreground font-semibold'}`}>
                       {task.title}
@@ -213,7 +213,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* Right Side: Quick Stats bar */}
-            <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-xl flex flex-col justify-between gap-4">
+            <div className="bg-secondary/20 border border-border/40 p-5 rounded-xl flex flex-col justify-between gap-4">
               <div className="space-y-3">
                 <h5 className="text-[10px] font-black uppercase text-muted-foreground">Gamified Status Bar</h5>
                 <div className="flex items-center justify-between">
@@ -234,7 +234,7 @@ export const LandingPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-t border-white/[0.05] pt-3">
+              <div className="border-t border-border/40 pt-3">
                 <Progress value={65} className="h-1.5" />
                 <span className="text-[8px] text-muted-foreground mt-1.5 block">850 / 2,000 XP to next level</span>
               </div>
@@ -252,20 +252,20 @@ export const LandingPage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1: AI Planner (Double size on desktop) */}
-          <Card className="text-left p-6 md:col-span-2 space-y-4 hover:border-primary/30 transition-colors bg-zinc-950/40 border-white/[0.06]">
+          <Card className="text-left p-6 md:col-span-2 space-y-4 hover:border-primary/30 transition-colors bg-card border-border/60">
             <Brain className="h-8 w-8 text-primary" />
             <h3 className="font-display font-bold text-lg">AI Cognitive Planner</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Autogenerates task checklists for heavy assignments. Analyzes deadlines, suggests checklists, and maps sub-tasks instantly using local LLM contexts.
             </p>
-            <div className="pt-2 border-t border-white/[0.05] flex justify-between text-[10px] text-muted-foreground">
+            <div className="pt-2 border-t border-border/40 flex justify-between text-[10px] text-muted-foreground">
               <span>Dynamic subtask generator</span>
               <span className="text-primary font-bold">Enabled</span>
             </div>
           </Card>
 
           {/* Card 2: Heatmap */}
-          <Card className="text-left p-6 space-y-4 hover:border-primary/30 transition-colors bg-zinc-950/40 border-white/[0.06]">
+          <Card className="text-left p-6 space-y-4 hover:border-primary/30 transition-colors bg-card border-border/60">
             <Calendar className="h-8 w-8 text-emerald-500" />
             <h3 className="font-display font-bold text-lg">Focus Heatmap</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -274,7 +274,7 @@ export const LandingPage: React.FC = () => {
           </Card>
 
           {/* Card 3: Gamification */}
-          <Card className="text-left p-6 space-y-4 hover:border-primary/30 transition-colors bg-zinc-950/40 border-white/[0.06]">
+          <Card className="text-left p-6 space-y-4 hover:border-primary/30 transition-colors bg-card border-border/60">
             <Trophy className="h-8 w-8 text-amber-500" />
             <h3 className="font-display font-bold text-lg">Gamification Engine</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -283,13 +283,13 @@ export const LandingPage: React.FC = () => {
           </Card>
 
           {/* Card 4: Offline Synchronization (Double size on desktop) */}
-          <Card className="text-left p-6 md:col-span-2 space-y-4 hover:border-primary/30 transition-colors bg-zinc-950/40 border-white/[0.06]">
+          <Card className="text-left p-6 md:col-span-2 space-y-4 hover:border-primary/30 transition-colors bg-card border-border/60">
             <Activity className="h-8 w-8 text-indigo-400" />
             <h3 className="font-display font-bold text-lg">Offline-First Synchronizer</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Wired to local IndexedDB storage. Actions are queued offline and automatically pushed to the Django sync gateway with Last-Write-Wins conflict resolution on reconnect.
             </p>
-            <div className="pt-2 border-t border-white/[0.05] flex justify-between text-[10px] text-muted-foreground">
+            <div className="pt-2 border-t border-border/40 flex justify-between text-[10px] text-muted-foreground">
               <span>Offline queue status</span>
               <span className="text-indigo-400 font-bold">Ready</span>
             </div>
@@ -305,9 +305,9 @@ export const LandingPage: React.FC = () => {
           </h2>
         </div>
 
-        <div className="relative flex overflow-x-hidden border-y border-white/[0.06] py-6 bg-white/[0.01]">
-          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#030303] to-transparent z-10 pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#030303] to-transparent z-10 pointer-events-none" />
+        <div className="relative flex overflow-x-hidden border-y border-border/40 py-6 bg-secondary/10">
+          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
           <motion.div
             className="flex gap-6 shrink-0"
@@ -321,7 +321,7 @@ export const LandingPage: React.FC = () => {
             {scrollExperiences.map((exp, idx) => (
               <div
                 key={idx}
-                className="w-[280px] p-5 rounded-2xl border border-white/[0.08] bg-zinc-900/40 text-left flex flex-col justify-between gap-4 shrink-0 shadow-sm"
+                className="w-[280px] p-5 rounded-2xl border border-border/60 bg-card text-left flex flex-col justify-between gap-4 shrink-0 shadow-sm"
               >
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
@@ -335,7 +335,7 @@ export const LandingPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="border-t border-white/[0.05] pt-2 text-[10px]">
+                <div className="border-t border-border/40 pt-2 text-[10px]">
                   <h5 className="font-bold text-foreground">{exp.name}</h5>
                   <span className="text-muted-foreground">{exp.role}</span>
                 </div>
@@ -346,7 +346,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Detailed Footer */}
-      <footer className="border-t border-white/[0.06] bg-zinc-950/40 pt-16 pb-8">
+      <footer className="border-t border-border/60 bg-secondary/10 pt-16 pb-8">
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-5 gap-10 text-left">
           {/* Brand Info Column */}
           <div className="md:col-span-2 space-y-4">
@@ -401,7 +401,7 @@ export const LandingPage: React.FC = () => {
               <input
                 type="email"
                 placeholder="you@domain.com"
-                className="flex h-9 w-full rounded-md border border-white/[0.08] bg-zinc-950/60 px-3 py-1 text-xs placeholder:text-muted-foreground focus-visible:outline-none"
+                className="flex h-9 w-full rounded-md border border-border/60 bg-background px-3 py-1 text-xs placeholder:text-muted-foreground focus-visible:outline-none"
               />
               <Button size="sm" variant="primary" className="h-9 px-3">
                 <Send className="h-3.5 w-3.5" />
@@ -410,7 +410,7 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto px-6 border-t border-white/[0.06] mt-12 pt-6 text-center text-xs text-muted-foreground flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="max-w-6xl mx-auto px-6 border-t border-border/40 mt-12 pt-6 text-center text-xs text-muted-foreground flex flex-col sm:flex-row justify-between items-center gap-4">
           <p>&copy; {new Date().getFullYear()} Nexora. All rights reserved.</p>
           <div className="flex gap-4">
             <Link to="/privacy" className="hover:underline">Privacy Policy</Link>

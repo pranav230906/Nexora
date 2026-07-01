@@ -21,8 +21,8 @@ def generate_embedding(text: str) -> List[float]:
     Falls back to zero vector if API is unavailable.
     """
     api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        logger.warning("No OPENAI_API_KEY set — returning zero embedding vector.")
+    if not api_key or api_key.startswith("gsk_") or api_key == "your-actual-openai-api-key" or api_key == "your-groq-api-key":
+        logger.warning("No valid OpenAI API key set (using Groq key or placeholder) — returning zero embedding vector.")
         return [0.0] * EMBEDDING_DIMENSIONS
 
     try:
@@ -54,7 +54,7 @@ def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
     Falls back to zero vectors if API is unavailable.
     """
     api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key or not texts:
+    if not api_key or not texts or api_key.startswith("gsk_") or api_key == "your-actual-openai-api-key" or api_key == "your-groq-api-key":
         return [[0.0] * EMBEDDING_DIMENSIONS for _ in texts]
 
     try:

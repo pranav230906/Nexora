@@ -43,9 +43,16 @@ apiClient.interceptors.response.use(
     if (error.response) {
       apiError.status = error.response.status
       const data = error.response.data as any
-      apiError.message = data?.message || error.response.statusText
-      apiError.errors = data?.errors
       apiError.code = data?.code
+
+      // If DRF validation errors (HTTP 400 Bad Request returning field-level errors at root)
+      if (error.response.status === 400 && data && typeof data === 'object' && !Array.isArray(data)) {
+        apiError.errors = data.errors || data
+        apiError.message = data.message || data.detail || 'Validation failed. Please check your inputs.'
+      } else {
+        apiError.message = data?.detail || data?.message || error.response.statusText
+        apiError.errors = data?.errors
+      }
     } else if (error.request) {
       apiError.message = 'No response received from the server. Check your network.'
     } else {

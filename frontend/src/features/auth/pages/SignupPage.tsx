@@ -18,6 +18,7 @@ export const SignupPage: React.FC = () => {
     register,
     handleSubmit,
     watch,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -51,11 +52,46 @@ export const SignupPage: React.FC = () => {
       // Navigate to OTP page passing email in state
       navigate('/otp-verification', { state: { email: data.email, action: 'signup' } })
     } catch (err: any) {
-      addToast({
-        type: 'error',
-        title: 'Signup Failed',
-        message: err.message || 'Account creation failed. Please try again.',
-      })
+      if (err.errors) {
+        let hasUsernameError = false
+        // Map Django backend validation errors back to react-hook-form fields
+        Object.entries(err.errors).forEach(([field, messages]) => {
+          const message = Array.isArray(messages) ? messages[0] : messages
+          const formField = 
+            field === 'username' ? 'name' : 
+            field === 'password_confirm' ? 'confirmPassword' : 
+            field
+          
+          setError(formField as any, {
+            type: 'server',
+            message: message as string,
+          })
+
+          if (field === 'username' && (message as string).toLowerCase().includes('exists')) {
+            hasUsernameError = true
+          }
+        })
+
+        if (hasUsernameError) {
+          addToast({
+            type: 'warning',
+            title: 'Username Taken',
+            message: 'A user with that username already exists. Please choose a different one.',
+          })
+        } else {
+          addToast({
+            type: 'error',
+            title: 'Validation Failed',
+            message: err.message || 'Please correct the highlighted errors.',
+          })
+        }
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Signup Failed',
+          message: err.message || 'Account creation failed. Please try again.',
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -76,12 +112,22 @@ export const SignupPage: React.FC = () => {
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <InputField
-          label="Full Name"
+          label="Username"
           type="text"
-          placeholder="John Doe"
+          placeholder="john_doe"
           error={errors.name?.message}
           disabled={isLoading}
-          {...register('name', { required: 'Name is required' })}
+          {...register('name', { 
+            required: 'Username is required',
+            minLength: {
+              value: 3,
+              message: 'Username must be at least 3 characters long',
+            },
+            pattern: {
+              value: /^[\w@./+-]+$/,
+              message: 'Enter a valid username. This value may contain only letters, numbers, and @/./+/-/_ characters.',
+            }
+          })}
         />
 
         <InputField

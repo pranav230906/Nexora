@@ -51,10 +51,16 @@ export const LoginPage: React.FC = () => {
       })
       navigate('/')
     } catch (err: any) {
+      let errorMessage = err.message || 'Invalid email or password.'
+      // If the backend returns 401 and indicates no account was found with the credentials
+      if (err.status === 401 && (errorMessage.includes('No active account') || errorMessage.includes('not found') || errorMessage.includes('given credentials'))) {
+        errorMessage = 'No account found with this email. Please sign up first!'
+      }
+
       addToast({
         type: 'error',
         title: 'Authentication Failed',
-        message: err.message || 'Invalid email or password.',
+        message: errorMessage,
       })
     } finally {
       setLoading(false)
